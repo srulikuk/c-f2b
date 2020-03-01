@@ -1,0 +1,62 @@
+# rememeber to enable each jail by adding "enabled = true" #
+
+[DEFAULT]
+# Number of login attempts before ban
+maxretry = 5
+# After how long to reset counter (6 hours)
+findtime = 21600
+
+# you have changed any of the ports form the default update accordingly
+[sshd]
+port    = ssh
+logpath = %(sshd_log)s
+backend = %(sshd_backend)s
+bantime = 2147483
+action = ipset-allports[name=sshd,bantime=2147483]
+
+[roundcube-auth]
+port     = http,https
+# Default log path is /var/log/roundcubemail/errors, check the path on you system
+logpath  = %(roundcube_errors_log)s
+# Use following line in your jail.local if roundcube logs to journal.
+#backend = %(syslog_backend)s
+bantime = 2147483
+action = ipset-allports[name=sshd,bantime=2147483]
+
+# To log wrong MySQL access attempts add to /etc/my.cnf in [mysqld] or
+# equivalent section:
+# log-warning = 2
+#
+# for syslog (daemon facility)
+# [mysqld_safe]
+# syslog
+#
+# for own logfile
+# [mysqld]
+# log-error=/var/log/mysqld.log
+[mysqld-auth]
+port     = 3306
+logpath  = %(mysql_log)s
+backend  = %(mysql_backend)s
+bantime = 2147483
+action = ipset-allports[name=sshd,bantime=2147483]
+
+[openvpn]
+enabled  = true
+port     = 1194
+protocol = udp
+filter   = openvpn
+# check your system for correct path
+logpath  = /var/log/openvpn.log
+maxretry = 3
+bantime = 2147483
+action = ipset-allports[name=sshd,bantime=2147483]
+
+[shared]
+enabled  = true
+port     = 1234
+maxretry = 1
+filter   = shared
+logpath  = /var/log/shared.log
+bantime = 2147483
+action = ipset-allports-shared[name=sshd,bantime=2147483]
