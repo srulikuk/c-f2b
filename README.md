@@ -143,19 +143,19 @@ Required:
 3. Create the shared log file `touch /var/log/shared.log`
 4. Create the shared action file `cp /etc/fail2ban/action.d/iptables-ipset-proto6-allports.conf /etc/fail2ban/action.d/ipset-allports-shared.local`
 5. Create the regular action file that will run the "add2db.py" script `cp /etc/fail2ban/action.d/iptables-ipset-proto6-allports.conf /etc/fail2ban/action.d/ipset-allports.local` and amend the "actionban" to;
-<pre>actionban = ipset add <ipmset> <ip> timeout <bantime> -exist
+<pre><code>actionban = ipset add <ipmset> <ip> timeout <bantime> -exist
             if [ '<restored>' = '0' ]; then
             python3 /root/add2db.py -j <name> -pr <protocol> -p <port> -i <ip>
             fi
-</pre>
+</code></pre>
 6. Create the "shared" filter file `touch /etc/fail2ban/filter.d/shared.local` and insert;
-<pre>
+<pre><code>
 [INCLUDES]
 #before = common.conf
 &nbsp;
 [Definition]
 failregex = : <HOST>: reported by .*
-</pre>
+</code></pre>
 7. Copy the "add2db.py & readdb.py" to your /root/ directory, or any other directory you wish, if you choose a different dir you must put the correct path in /etc/fail2ban/action.d/ipset-allports.local as in #5 above and in the cronjob as in #10 below.
 8. Amend the MySQL connection details (host/port/passwd) in both add2db.py and in readdb.py.
 9. Restart fail2ban `systemctl restart fail2ban.service`
