@@ -153,7 +153,7 @@ actionban = ipset add <ipmset> <ip> timeout <bantime> -exist
 ```
 [INCLUDES]
 #before = common.conf
-&nbsp;
+
 [Definition]
 failregex = : <HOST>: reported by .*
 ```
@@ -169,8 +169,8 @@ failregex = : <HOST>: reported by .*
 &nbsp;
 
 #### <a name="natforward">NAT FORWARD Config</a>
-For hosts that are a Firewall or act as a Port Forwarder in order to block banned IP's from being forwarded we must a FORWARD rule to the iptables chain as follows, in both `/etc/fail2ban/action.d/ipset-allports-shared.local` and in `/etc/fail2ban/action.d/ipset-allports.local` add the following line to the `actionstart` and the `actionstop` right below the `<iptables> -I ...` lines in those sections
-<pre>          <iptables> -I FORWARD -i ppp+ -m set --match-set <ipmset> src -j <blocktype></pre>
+For hosts that are a Firewall or act as a Port Forwarder in order to block banned IP's from being forwarded we must a FORWARD rule to the iptables chain as follows, in both `/etc/fail2ban/action.d/ipset-allports-shared.local` and in `/etc/fail2ban/action.d/ipset-allports.local` add the following line to the `actionstart` and the `actionstop` right below the `<iptables> -I ...` line in those sections
+```          <iptables> -I FORWARD -i ppp+ -m set --match-set <ipmset> src -j <blocktype>```
 
 &nbsp;
 
