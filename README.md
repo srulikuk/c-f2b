@@ -169,7 +169,7 @@ failregex = : <HOST>: reported by .*
 &nbsp;
 
 #### <a name="natforward">NAT FORWARD Config</a>
-For hosts that are a Firewall or act as a Port Forwarder in order to block banned IP's from being forwarded we must a FORWARD rule to the iptables chain as follows, in both `/etc/fail2ban/action.d/ipset-allports-shared.local` and in `/etc/fail2ban/action.d/ipset-allports.local` add the following line to the `actionstart` and the `actionstop` right below the `<iptables> -I ...` line in those sections
+For hosts that are a Firewall or act as a Port Forwarder in order to block banned IP's from being forwarded we must a FORWARD rule to the iptables chain as follows, in both `/etc/fail2ban/action.d/ipset-allports-shared.local` and in `/etc/fail2ban/action.d/ipset-allports.local` add the following line to the `actionstart` and the `actionstop` right below the `<iptables> -I ...` line in those sections (repalce the `"ppp+"` with whatever your WAN connection is)
 ```          
            <iptables> -I FORWARD -i ppp+ -m set --match-set <ipmset> src -j <blocktype>
 ```
@@ -208,4 +208,4 @@ All good and useful contribution to the code and README using pull requests are 
 ### <a name="conclusion">Conclusion:</a>
 These scripts and config seem to be working very nicely, before implementing this aggressive method I had between 2,000-10,000 failed logins per week the source from ranging from 500-2,000 different IP's.
 
-I found within 12 hours of implementing this that failed logins / spammers that were banned just stopped, by blocking only 108 IP's out of 1,000's of repeat offending IP's I am down to under 5 failed logins per day, it seems most of the offending attempts are 1-2 group of shysters and as soon as they see their traffic is blocked they just stop pestering your IP - This is just my opinion based on the initial results.
+I found within 12 hours of implementing this that failed logins / spammers that were banned just stopped, by blocking only 108 IP's out of 1,000's of repeat offending IP's I am down to under 5 failed logins per day, it seems most of the offending attempts are 1-2 groups of s*** and as soon as they see their traffic is blocked they just stop pestering your IP - This is just my opinion based on the initial results.
