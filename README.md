@@ -197,7 +197,7 @@ Test your amended filter files before reloading fail2ban service using `"fail2ba
 
 ### <a name="contrib">Contributions</a>
 Credits to those that contributed to starting this small project
-* Vitalii Boiko (imgrey)
+* Vitalii Boiko
 * Paul Tsviliuk
 * Matthias Busch
 
