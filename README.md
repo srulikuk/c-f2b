@@ -149,13 +149,13 @@ Required:
             fi
 </code></pre>
 6. Create the "shared" filter file `touch /etc/fail2ban/filter.d/shared.local` and insert;
-<pre><code>
+<pre>
 [INCLUDES]
 #before = common.conf
 &nbsp;
 [Definition]
 failregex = : <HOST>: reported by .*
-</code></pre>
+</pre>
 7. Copy the "add2db.py & readdb.py" to your /root/ directory, or any other directory you wish, if you choose a different dir you must put the correct path in /etc/fail2ban/action.d/ipset-allports.local as in #5 above and in the cronjob as in #10 below.
 8. Amend the MySQL connection details (host/port/passwd) in both add2db.py and in readdb.py.
 9. Restart fail2ban `systemctl restart fail2ban.service`
