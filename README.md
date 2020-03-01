@@ -22,7 +22,7 @@
 With thousands of bots knocking at the ports it's time to get fail2ban to stop'em dead, but why allow each bot to pester each of the servers before fail2ban stops them?
 I tried to make this as generic as possible and will suit many use-cases but the use case I wrote it for is simply a use-case where some servers directly are behind a WAN connection and some behind a dedicated firewall (NATed).
 
-There are many scripts to be found with similar objectives however I did not find any that I considered robust enough neither did I find any in python the closest one I found to my liking was in php but queries the DB for all IP's added in the last 60 seconds this is lacklustre for multiple reasons.
+There are many scripts to be found with similar objectives however I did not find any that I considered robust enough neither did I find any in python the closest one I found to my liking was in php but queries the DB for all IP's added in the last 60 seconds this is lacklustre in my opinion.
 
 The instructions / config here is for using fail2ban with ipset actions, if you wish to use regular iptables instead its simple enough to adjust.
 
