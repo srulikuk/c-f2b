@@ -76,7 +76,7 @@ To add to f2b readdb.py first `selects` all records `where` the status for this 
   - This has been written and tested for python3 - No tests were done on python2
   - The instructions for adding to / reading from DB have been written after testing on CentOS / ClearOS and ubuntu 18.04, they should work fine for these.  
   - The instructions for setting up the DB has only been tested on ubuntu 18.04 but should be very much the same for other distros.  
-  - For distros other then ubuntu/debain replace "`apt install`" with whatever package manager your disro uses.  
+  - For distros other then ubuntu/debain replace "`apt install`" with whatever package manager your distro uses.  
   - All commands here are assuming you are in a root shell or executing with `sudo` privileges.
 
 &nbsp;
@@ -143,25 +143,25 @@ Required:
 3. Create the shared log file `touch /var/log/shared.log`
 4. Create the shared action file `cp /etc/fail2ban/action.d/iptables-ipset-proto6-allports.conf /etc/fail2ban/action.d/ipset-allports-shared.local`
 5. Create the regular action file that will run the "add2db.py" script `cp /etc/fail2ban/action.d/iptables-ipset-proto6-allports.conf /etc/fail2ban/action.d/ipset-allports.local` and amend the "actionban" to;
-<pre>`actionban = ipset add <ipmset> <ip> timeout <bantime> -exist`
-            `if [ '<restored>' = '0' ]; then`
-            `python3 /root/add2db.py -j <name> -pr <protocol> -p <port> -i <ip>`
-            `fi`
+<pre>actionban = ipset add <ipmset> <ip> timeout <bantime> -exist
+            if [ '<restored>' = '0' ]; then
+            python3 /root/add2db.py -j <name> -pr <protocol> -p <port> -i <ip>
+            fi
 </pre>
 6. Create the "shared" filter file `touch /etc/fail2ban/filter.d/shared.local` and insert;
 <pre>
-`[INCLUDES]`
-`#before = common.conf`
+[INCLUDES]
+#before = common.conf
 &nbsp;
-`[Definition]`
-`failregex = : <HOST>: reported by .*`
+[Definition]
+failregex = : <HOST>: reported by .*
 </pre>
 7. Copy the "add2db.py & readdb.py" to your /root/ directory, or any other directory you wish, if you choose a different dir you must put the correct path in /etc/fail2ban/action.d/ipset-allports.local as in #5 above and in the cronjob as in #10 below.
 8. Amend the MySQL connection details (host/port/passwd) in both add2db.py and in readdb.py.
 9. Restart fail2ban `systemctl restart fail2ban.service`
 10. On all the hosts that will read the IP's from the db (readdb.py) add a cronjob to run every minute execute `crontab -e` and add;  
 `* * * * * python3 /root/readdb.py`  
-11. Make sure your crontab uses /bin/bash and has all the /bin /sin/ paths like so (above the cronjob entries);  
+11. Make sure your crontab uses /bin/bash and has all the /bin /sbin/ /usr/ paths like so (above the cronjob entries);  
 `SHELL=/bin/bash`  
 `PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin`  
 
@@ -169,7 +169,7 @@ Required:
 
 #### <a name="natforward">NAT FORWARD Config</a>
 For hosts that are a Firewall or act as a Port Forwarder in order to block banned IP's from being forwarded we must a FORWARD rule to the iptables chain as follows, in both `/etc/fail2ban/action.d/ipset-allports-shared.local` and in `/etc/fail2ban/action.d/ipset-allports.local` add the following line to the `actionstart` and the `actionstop` right below the `<iptables> -I ...` lines in those sections
-<pre>          `<iptables> -I FORWARD -i ppp+ -m set --match-set <ipmset> src -j <blocktype>`</pre>
+<pre>          <iptables> -I FORWARD -i ppp+ -m set --match-set <ipmset> src -j <blocktype></pre>
 
 &nbsp;
 
@@ -186,7 +186,7 @@ Test your amended filter files before reloading fail2ban service using `"fail2ba
 &nbsp;
 
 ### <a name="todo">TODO:</a>
-1. Implement repeat offender punishment for bad logins that can easily be legitimate users that are bad with passwords, start the ban at 15/1day minutes and work the way up to 25 days
+1. Implement repeat offender punishment for bad logins that can easily be legitimate users that are bad with passwords, start the ban at 15 minutes / 1 day and work the way up to 25 days
 2. Find a way to ban all IP's that try probing closed ports
 3. Replace the "subprocess" in the python scripts with python code.
 
