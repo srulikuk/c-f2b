@@ -143,11 +143,13 @@ Required:
 3. Create the shared log file `touch /var/log/shared.log`
 4. Create the shared action file `cp /etc/fail2ban/action.d/iptables-ipset-proto6-allports.conf /etc/fail2ban/action.d/ipset-allports-shared.local`
 5. Create the regular action file that will run the "add2db.py" script `cp /etc/fail2ban/action.d/iptables-ipset-proto6-allports.conf /etc/fail2ban/action.d/ipset-allports.local` and amend the "actionban" to;
-<pre><code>actionban = ipset add <ipmset> <ip> timeout <bantime> -exist
+```
+<pre>actionban = ipset add <ipmset> <ip> timeout <bantime> -exist
             if [ '<restored>' = '0' ]; then
             python3 /root/add2db.py -j <name> -pr <protocol> -p <port> -i <ip>
             fi
-</code></pre>
+</pre>
+```
 6. Create the "shared" filter file `touch /etc/fail2ban/filter.d/shared.local` and insert;
 <pre>
 [INCLUDES]
