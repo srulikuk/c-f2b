@@ -4,10 +4,10 @@
 * [Description](#description)
 * [How it works](#structure)
 * [Instructions](#instructions)
-     * [Important Notes](#notes)
+  * [Important Notes](#notes)
   * [Requirements](#requirements)
   * [Creating the Database](#createdb)
-  * [MySQL over SSL](#mysqlssl)
+     * [MySQL over SSL](#mysqlssl)
      * [Create the DB User](dbuser)
   * [Configuring fail2ban](#f2bconfig)
   * [NAT FORWARD Config](#natforward)
@@ -64,8 +64,8 @@ To add to f2b readdb.py first `selects` all records `where` the status for this 
 
   * If not banned it writes it to `shared` jail log f2b and sets the host status for this record to `1`
   * if it's banned it checks how recent the ban was;
-  * * If the ban was recent (ban still has more than ~40% of the bantime left) it sets the host status for this record to `2`
-  * * If the ban was not recent it ignores it and leaves the status at `0` (when the ban expires it will be banned again)
+    * If the ban was recent (ban still has more than ~40% of the bantime left) it sets the host status for this record to `2`
+    * If the ban was not recent it ignores it and leaves the status at `0` (when the ban expires it will be banned again)
   * If there was an error adding it to the ban it sets it to status `3`
 
 &nbsp;
@@ -86,14 +86,14 @@ To add to f2b readdb.py first `selects` all records `where` the status for this 
 - On the host hosting the DB install; `apt install python3 python3-dev python3-pip fail2ban mysql-server mysql-client`
 - On the Client hosts install ; `apt install python3 python3-dev python3-pip fail2ban mysql-client`
 - On all hosts `pip3 install mysql-connector-python psutil`
-- - (Some might comment `pip install` should not be run as root - I welcome contributions of the correct way to do this)
+  - (Some might comment that `pip install` should not be run as root - I welcome contributions of the correct way to do this)
 
 &nbsp;
 
 #### <a name="createdb">Creating the database:</a>
 
-1. `-` Its advisable to secure the mysql installation, run the following command and follow the instructions `mysql_secure_installation`.
-2. `-` Enter mysql root user (execute `mysql` from the command line) and create the db / table / user as follows.
+1. Its advisable to secure the mysql installation, run the following command and follow the instructions `mysql_secure_installation`.
+2. Enter mysql root user (execute `mysql` from the command line) and create the db / table / user as follows.
 3. `CREATE DATABASE fail2ban;`
 4. `USE fail2ban;`
 5. `CREATE TABLE IF NOT EXISTS ip_table (`  
@@ -113,9 +113,9 @@ To add to f2b readdb.py first `selects` all records `where` the status for this 
 #### <a name="mysqlssl">Securing the MySQL connection:</a>
 - In ubuntu 18.04 MySQL should support SSL out off the box we just need to create the user in a way that it can only connect using SSL
 - There are 2 ways to secure MySQL from only authorised require_secure_transport
-- - a. create an identical user for each host specifying its IP (`'f2ban@''x.x.x.x'`) I won't expand on this method
-- - b. create 1 user and add the allowed hosts to iptables for each range or IP run `iptables -A INPUT -p tcp -s x.x.x.x --dport <port number here> -m conntrack --ctstate NEW,ESTABLISHED -j ACCEPT`.
-- - - For the iptables rules to persists across reboots you will need to save it (search the www for iptables-persistant)
+  - a. create an identical user for each host specifying its IP (`'f2ban@''x.x.x.x'`) I won't expand on this method
+  - b. create 1 user and add the allowed hosts to iptables for each range or IP run `iptables -A INPUT -p tcp -s x.x.x.x --dport <port number here> -m conntrack --ctstate NEW,ESTABLISHED -j ACCEPT`.
+    - For the iptables rules to persists across reboots you will need to save it (search the www for iptables-persistant)
 
 The following 3 changes are ideal to secure mysql in /etc/mysql/mysql.conf.d/mysqld.cnf (distro dependent)
 
@@ -155,6 +155,7 @@ Required:
 &nbsp;
 `[Definition]`
 `failregex = : <HOST>: reported by .*`
+</pre>
 7. Copy the "add2db.py & readdb.py" to your /root/ directory, or any other directory you wish, if you choose a different dir you must put the correct path in /etc/fail2ban/action.d/ipset-allports.local as in #5 above and in the cronjob as in #10 below.
 8. Amend the MySQL connection details (host/port/passwd) in both add2db.py and in readdb.py.
 9. Restart fail2ban `systemctl restart fail2ban.service`
