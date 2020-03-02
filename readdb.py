@@ -8,6 +8,7 @@ import mysql.connector
 import psutil
 import datetime
 import subprocess
+import my_conn
 
 # Check if another instance is running before continuing.
 current_pid = os.getpid()
@@ -18,12 +19,14 @@ for process in psutil.process_iter():
       p.kill()
       break
 
+# mysql connection
 db = mysql.connector.connect(
-    host="10.10.10.10",
-    port=3306,
-    user="f2ban",
-    passwd='mypasswd',
-    db="fail2ban")
+    host=(my_conn.host),
+    port=(my_conn.port),
+    user=(my_conn.user),
+    passwd=(my_conn.passwd),
+    db=(my_conn.db)
+)
 
 def main():
     # Get hostname - remove dots & hypens to match DB column name
@@ -49,7 +52,7 @@ def main():
 	        sys.exit(1)
 
     # Query the DB for new BAD ip's
-    query = """SELECT id, added_by, created, jailname, ip FROM ip_table where '{}' = 0 ORDER BY id""".format('{}'.format("host_"+table_hostname))
+    query = """SELECT id, added_by, created, jailname, ip FROM ip_table where {} = '0' ORDER BY id""".format('{}'.format("host_"+table_hostname))
     cursor.execute(query)
     result = cursor.fetchall()
     for row in result:

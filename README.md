@@ -57,7 +57,7 @@ To read from the DB and add new IP's to a hosts f2b we use readdb.py (this shoul
 
 Adding to f2b from the DB uses a custom `jail` we named `shared`  
 It does not add it directly to f2b but instead writes it to the log file of the `shared` jail and f2b picks it up instantly - this was done to resolve multiple issues;  
-a. In some systems adding directly to f2b-client is not persistent across reboots / service restarts.  
+a. In some f2b versions adding directly to f2b-client is not persistent across reboots / service restarts ([github issue #2647](https://github.com/fail2ban/fail2ban/issues/2647)).  
 b. The performance far better this way, a benchmark test on a clean machine with no f2b bans reading 122 records (of which 108 were unique IP's) adding each to directly to f2b took 37 seconds vs adding to the log file took 8 seconds (including f2b banning those IP's)
 
 To add to f2b readdb.py first `selects` all records `where` the status for this `host` = `0` it then checks the host if f2b has this IP already banned.
@@ -157,8 +157,8 @@ actionban = ipset add <ipmset> <ip> timeout <bantime> -exist
 [Definition]
 failregex = : <HOST>: reported by .*
 ```
-7. Copy the "add2db.py & readdb.py" to your /root/ directory, or any other directory you wish, if you choose a different dir you must put the correct path in /etc/fail2ban/action.d/ipset-allports.local as in #5 above and in the cronjob as in #10 below.
-8. Amend the MySQL connection details (host/port/passwd) in both add2db.py and in readdb.py.
+7. Copy the files "add2db.py, readdb.py & conn.py" to your /root/ directory, or any other directory you wish, if you choose a different dir you must put the correct path in /etc/fail2ban/action.d/ipset-allports.local as in #5 above and in the cronjob as in #10 below.
+8. Amend the MySQL connection details (host/port/user/passwd/db) in both conn.py.
 9. Restart fail2ban `systemctl restart fail2ban.service`
 10. On all the hosts that will read the IP's from the db (readdb.py) add a cronjob to run every minute execute `crontab -e` and add;  
 `* * * * * python3 /root/readdb.py`  

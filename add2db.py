@@ -8,13 +8,16 @@ import mysql.connector
 import psutil
 import time
 import subprocess
+import my_conn
 
+# mysql connection
 db = mysql.connector.connect(
-    host="10.10.10.10",
-    port=3306,
-    user="f2ban",
-    passwd='mypasswd',
-    db="fail2ban")
+    host=(my_conn.host),
+    port=(my_conn.port),
+    user=(my_conn.user),
+    passwd=(my_conn.passwd),
+    db=(my_conn.db)
+)
 
 # Parse the params passed to this script
 parser = argparse.ArgumentParser()

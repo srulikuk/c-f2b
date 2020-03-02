@@ -5,6 +5,7 @@
 maxretry = 5
 # After how long to reset counter (6 hours)
 findtime = 21600
+ignoreip = x.x.x.x 192.168.1.0/32
 
 # you have changed any of the ports form the default update accordingly
 [sshd]
