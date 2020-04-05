@@ -9,6 +9,11 @@ import time
 import subprocess
 import my_conn
 
+# for log file print date/CURRENT_TIMESTAMP
+now = datetime.datetime.now()
+print ("ad2db.py Start at : ")
+print (now.strftime("%Y-%m-%d %H:%M:%S"))
+
 # mysql connection
 db = mysql.connector.connect(
     host=(my_conn.host),

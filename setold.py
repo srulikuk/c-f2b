@@ -6,6 +6,11 @@ import datetime
 from tendo import singleton
 import my_conn
 
+# for log file print date/CURRENT_TIMESTAMP
+now = datetime.datetime.now()
+print ("setold.py Start at : ")
+print (now.strftime("%Y-%m-%d %H:%M:%S"))
+
 # Check if another instance is running - if yes exit
 try:
     me = singleton.SingleInstance()
