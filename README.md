@@ -179,7 +179,7 @@ For hosts that are a Firewall or forward NAT traffic, in order to block banned I
 2. If you are not intending to place the .py files directly in the /root/ dir update the paths in all files in etc_files/fail2ban/action.d/
 3. If you wont be using the portprobe jail change the `enabled = true` to `false` in etc_files/fail2ban/jail.d/central.local and comment the line in etc_files/rsyslog.d/iptables_port-probe.conf
 4. cd into the cloned git dir and copy all the config files, `rsync -av --exclude='example_*' etc_files/ /etc/`
-5. Make sure the jail log files exist before reloading fail2ban service `touch /var/log/{shared.log,iptables_portprobe.log}`
+5. Make sure the jail log files exist before reloading fail2ban service `touch /var/log/{shared.log,iptables_portprobe.log}` and change owner `chown syslog:adm /var/log/{shared.log,iptables_portprobe.log}`
 6. CRITICAL: read [Portprobe Jail](#portprobe) above to understand the iptables rules required, if you do not add the iptables rule correctly for your use-case you can end up banning all connections instantly!
 7. Update all the connection details in my_conn.py to match your DB.
 8. Copy the python scripts, cd into the cloned git dir and copy `cp *.py /root/` or other target dir of your choosing (see point #2 above)
