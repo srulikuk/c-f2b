@@ -1,11 +1,15 @@
 # rememeber to enable each jail by adding "enabled = true" #
 
+[INCLUDES]
+before = whitelist.local
+
 [DEFAULT]
 # Number of login attempts before ban
 maxretry = 5
 # After how long to reset counter (6 hours)
 findtime = 21600
-ignoreip = x.x.x.x 192.168.1.0/32
+# ignore ip's are called from whitelist with following line
+ignoreip = %(ignoreip)s
 
 # you have changed any of the ports form the default update accordingly
 [sshd]
@@ -52,12 +56,3 @@ logpath  = /var/log/openvpn.log
 maxretry = 3
 bantime = 2147483
 action = ipset-allports[name=sshd,bantime=2147483]
-
-[shared]
-enabled  = true
-port     = 1234
-maxretry = 1
-filter   = shared
-logpath  = /var/log/shared.log
-bantime = 2147483
-action = ipset-allports-shared[name=sshd,bantime=2147483]

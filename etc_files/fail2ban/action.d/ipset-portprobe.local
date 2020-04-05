@@ -14,7 +14,7 @@
 # modules which probably won't be protocol version 6.
 #
 # Modified: Alexander Koeppe <format_c@online.de>, Serg G. Brester <serg.brester@sebres.de>
-#	made config file IPv6 capable (see new section Init?family=inet6)
+#       made config file IPv6 capable (see new section Init?family=inet6)
 
 [INCLUDES]
 
@@ -28,7 +28,8 @@ before = iptables-common.conf
 #
 actionstart = ipset create <ipmset> hash:ip timeout <bantime><familyopt>
               <iptables> -I <chain> -m set --match-set <ipmset> src -j <blocktype>
-              <iptables> -I FORWARD -i ppp+ -m set --match-set <ipmset> src -j <blocktype>
+# If using on a machine that forwards NAT traffic uncomment the following line and set the WAN interface name
+#             <iptables> -I FORWARD -i ppp+ -m set --match-set <ipmset> src -j <blocktype>
 
 # Option:  actionflush
 # Notes.:  command executed once to flush IPS, by shutdown (resp. by stop of the jail or this action)
@@ -40,10 +41,9 @@ actionflush = ipset flush <ipmset>
 # Notes.:  command executed at the stop of jail (or at the end of Fail2Ban)
 # Values:  CMD
 #
-
-
 actionstop = <iptables> -D <chain> -m set --match-set <ipmset> src -j <blocktype>
-             <iptables> -D FORWARD -i ppp+ -m set --match-set <ipmset> src -j <blocktype>
+# If using on a machine that forwards NAT traffic uncomment the following line and set the WAN interface name
+#             <iptables> -D FORWARD -i ppp+ -m set --match-set <ipmset> src -j <blocktype>
              <actionflush>
              ipset destroy <ipmset>
 
@@ -54,6 +54,12 @@ actionstop = <iptables> -D <chain> -m set --match-set <ipmset> src -j <blocktype
 # Values:  CMD
 #
 actionban = ipset add <ipmset> <ip> timeout <bantime> -exist
+            if [ '<restored>' = '0' ]; then
+# if writing destination ip to db uncomment the following line
+#            python3 /root/add2db.py -j <name> -pr <F-PROTO> -p <F-PORT> -i <ip> -d <F-DST>
+# if NOT writing dest ip to db comment previous line and uncomment the following line
+            python3 /root/add2db.py -j <name> -pr <F-PROTO> -p <F-PORT> -i <ip>
+            fi
 
 # Option:  actionunban
 # Notes.:  command executed when unbanning an IP. Take care that the
@@ -69,6 +75,7 @@ actionunban = ipset del <ipmset> <ip> -exist
 # Notes:  specifies the bantime in seconds (handled internally rather than by fail2ban)
 # Values:  [ NUM ]  Default: 600
 #
+#bantime = 2147483
 bantime = 600
 
 ipmset = f2b-<name>

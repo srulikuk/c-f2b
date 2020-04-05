@@ -1,0 +1,29 @@
+[INCLUDES]
+before = whitelist.local
+
+[DEFAULT]
+# Number of login attempts before ban
+maxretry = 5
+# After how long to reset counter (6 hours)
+findtime = 21600
+# ignore ip's are called from whitelist with following line
+ignoreip = %(ignoreip)s
+
+[shared]
+enabled  = true
+port     = 1234
+maxretry = 1
+filter   = shared
+logpath  = /var/log/shared.log
+bantime = 2147483
+action = ipset-allports-shared[name=sshd,bantime=2147483]
+
+[portprobe]
+enabled = true
+port = 0:65535
+logpath = /var/log/iptables_portprobe.log
+filter  = port-probe
+maxretry = 1
+findtime = 21600
+bantime = 2147483
+action = ipset-portprobe[name=portprobe,bantime=2147483]

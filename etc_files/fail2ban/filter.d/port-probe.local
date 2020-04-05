@@ -1,0 +1,11 @@
+# Fail2Ban filter for port probes
+
+[INCLUDES]
+
+before = common.conf
+
+[Definition]
+
+failregex = ^.*IN=.* OUT=.* MAC=.* SRC=<HOST> DST=<F-DST>\S+</F-DST> .*PROTO=<F-PROTO>\S+</F-PROTO>.*DPT=<F-PORT>\d+</F-PORT> .*
+
+ignoreregex =

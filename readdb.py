@@ -4,20 +4,18 @@ import socket
 import re
 import string
 import os
+import sqlite3
 import mysql.connector
-import psutil
 import datetime
 import subprocess
+from tendo import singleton
 import my_conn
 
-# Check if another instance is running before continuing.
-current_pid = os.getpid()
-for process in psutil.process_iter():
-    if process.cmdline() == ['python3', 'readdb.py'] and process.pid != current_pid:
-      print('Proccess already running. Exiting.')
-      p = psutil.Process(current_pid)
-      p.kill()
-      break
+# Check if another instance is running - if yes exit
+try:
+    me = singleton.SingleInstance()
+except:
+    sys.exit(0)
 
 # mysql connection
 db = mysql.connector.connect(
@@ -46,13 +44,28 @@ def main():
             addcol = """ALTER TABLE ip_table ADD COLUMN {} SMALLINT NOT NULL DEFAULT 0""".format('{}'.format("host_"+table_hostname))
             cursor.execute(addcol)
             db.commit()
+            setold = """UPDATE ip_table SET {} = '5' WHERE DATE_SUB(CURDATE(),INTERVAL 25 DAY) >= created""".format('{}'.format("host_"+table_hostname))
+            cursor.execute(setold)
+            db.commit()
         except mysql.connector.Error as err:
 	        print("Something went wrong: {}".format(err))
 	        # If the columnn does not exist and we cannot add it exit
-	        sys.exit(1)
+        db.close()
+        sys.exit(1)
 
     # Query the DB for new BAD ip's
-    query = """SELECT id, added_by, created, jailname, ip FROM ip_table where {} = '0' ORDER BY id""".format('{}'.format("host_"+table_hostname))
+    query = """
+    SELECT id, added_by, created, jailname, ip
+    FROM ip_table
+    WHERE {} = '0'
+    AND whitelist = '0'
+    AND DATE_SUB(CURDATE(),INTERVAL 25 DAY) <= created
+    ORDER BY id
+    """.format(
+        '{}'.format(
+            "host_"+table_hostname
+        )
+    )
     cursor.execute(query)
     result = cursor.fetchall()
     for row in result:
@@ -89,6 +102,47 @@ def main():
                 update = """UPDATE ip_table SET {} = '3' WHERE id={}""".format('{}'.format("host_"+table_hostname), row_id)
                 cursor.execute(update)
                 db.commit()
+#    db.close()
+
+    # Check if any ip's need to be removed from ban
+    queryrem = """
+    SELECT id, ip, whitelist
+    FROM ip_table
+    WHERE whitelist != '0'
+    AND {} != '4'
+    ORDER BY id
+    """.format(
+        '{}'.format(
+            "host_"+table_hostname
+        )
+    )
+    cursor.execute(queryrem)
+    result = cursor.fetchall()
+    con = sqlite3.connect("/var/lib/fail2ban/fail2ban.sqlite3")
+    cur = con.cursor()
+    for row in result:
+        row_id = (row[0])
+        rem_ip = (row[1])
+        rem_type = (row[2])
+        row
+#        remcmd = subprocess.call([unbanscript, row_ip])
+        for row in cur.execute("""SELECT jail FROM bans WHERE ip='{}'""".format('{}'.format(rem_ip))):
+            f2bcmd1 = ("fail2ban-client set " + row[0] + " unbanip " + rem_ip)
+            subprocess.run(f2bcmd1, shell=True)
+            if rem_type == 1:
+                f2bcmd2 = ("fail2ban-client set " + row[0] + " addignoreip " + rem_ip)
+                subprocess.run(f2bcmd2, shell=True)
+                with open("/etc/fail2ban/jail.d/whitelist.local", "r+") as whitelist:
+                    if rem_ip not in whitelist.read():
+                        whitelist.write(' {}\n'.format(rem_ip,))
+
+        con.close()
+        cursor = db.cursor()
+        update = """UPDATE ip_table SET {} = '4' WHERE id='{}'""".format(
+        '{}'.format("host_"+table_hostname), row_id
+        )
+        cursor.execute(update)
+    con.close()
     db.close()
     sys.exit(0)
 
