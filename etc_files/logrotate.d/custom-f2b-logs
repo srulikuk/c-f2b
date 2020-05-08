@@ -1,0 +1,11 @@
+/var/log/cronRun.log
+/var/log/portprobe.log
+/var/log/shared.log {
+    missingok
+    notifempty
+    maxsize 5M
+    rotate 25
+    dateext
+    dateformat -%Y-%m-%d_%s
+    create
+}

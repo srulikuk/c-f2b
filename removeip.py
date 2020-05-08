@@ -3,14 +3,32 @@
 import sys
 import argparse
 import os
-import re
-import string
+#import re
+#import string
 import socket
 import subprocess
 import ipaddress
 import sqlite3
 import mysql.connector
 import my_conn
+
+my_host_name = socket.gethostname()
+
+# get UUID
+def get_uuid():
+    global my_host_uuid
+    global my_host_id
+    try:
+        with open("/etc/machine-id", 'r') as uuid_file:
+            my_host_uuid = uuid_file.read().strip()
+    except FileNotFoundError:
+        import uuid
+        my_host_uuid = uuid.uuid1().hex
+        with open("/etc/machine-id", 'a') as uuid_file:
+            uuid_file.write(my_host_uuid)
+    mhu = my_host_uuid
+    my_host_id = mhu[0:5] + "_" + mhu[27:32]
+    my_host_id_col = ("host_"+my_host_id)
 
 # mysql connection
 db = mysql.connector.connect(
@@ -46,36 +64,54 @@ if args.remove_type not in (1,2):
 
 def main():
     # Get the hostname
-    hostname = socket.gethostname()
     # Get hostname - remove dots & hypens to match DB column name
-    remove = string.punctuation
-    pattern = r"[{}]".format(remove)
-    table_hostname = re.sub(pattern, "", socket.gethostname())
+#    remove = string.punctuation
+#    pattern = r"[{}]".format(remove)
+#    table_hostname = re.sub(pattern, "", socket.gethostname())
 
     rem_ip = str(args.remove_ip)
     rem_type = args.remove_type
 #    subprocess.call([unbanscript, ip])
     con = sqlite3.connect("/var/lib/fail2ban/fail2ban.sqlite3")
     cur = con.cursor()
-    for row in cur.execute("""SELECT jail FROM bans WHERE ip='{}'""".format('{}'.format(rem_ip))):
+    for row in cur.execute(
+        """SELECT jail
+        FROM bans
+        WHERE ip='{}'
+        """.format(
+#            '{}'.format(
+            rem_ip
+#                )
+            )
+        ):
         f2bcmd1 = ("fail2ban-client set " + row[0] + " unbanip " + rem_ip)
         subprocess.run(f2bcmd1, shell=True)
         if rem_type == 1:
             f2bcmd2 = ("fail2ban-client set " + row[0] + " addignoreip " + rem_ip)
             subprocess.run(f2bcmd2, shell=True)
     con.close()
+
+    db.ping(reconnect=True, attempts=3, delay=150)
+    conn.autocommit = false
     cursor = db.cursor()
-    update = """UPDATE ip_table SET whitelist = '{1}', {0} = '4' WHERE ip = '{2}'""".format(
-        '{}'.format("host_"+table_hostname), rem_type, rem_ip
+    update = """
+    UPDATE ip_table
+    SET whitelist = '{1}', {0} = '4'
+    WHERE ip = '{2}'
+    """.format(
+#        '{}'.format(
+#            "host_"+my_host_id
+#        ), rem_type, rem_ip
+        my_host_id_col, rem_type, rem_ip
     )
     cursor.execute(update)
+    db.commit()
     if rem_type == 1:
         with open("/etc/fail2ban/jail.d/whitelist.local", "r+") as whitelist:
             if rem_ip not in whitelist.read():
                 whitelist.write(' {}\n'.format(rem_ip,))
 
 #    cursor.execute(update)
-    db.commit()
     db.close()
     sys.exit(0)
 
