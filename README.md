@@ -13,6 +13,7 @@
   * [Configuring fail2ban](#f2bconfig)
   * [NAT FORWARD Config](#natforward)
 * [Fine-tuning f2b](#f2bregex)
+* [Issues](#issues)
 * [TODO](#todo)
 
 &nbsp;
@@ -34,7 +35,7 @@ This setup is pretty aggressive:
 &nbsp;
 
 ### <a name="structure">How it works</a>
-When fail2ban issues a ban it executes "add2db.py" which adds the `ip`, added by `hostname` and `jailname` and other `params`to the central DB, each host has its own INT column which holds the status for that IP in that host, the status's are;
+When fail2ban issues a ban it executes "add2db.py" which adds the `ip`, added by `hostname` and `jailname` and other `params`to the central DB, each host has its own INT column (named by part UUID) which holds the status for that record in that host, the status's are;
 ```
 0 = Not yet added
 1 = added
@@ -53,13 +54,19 @@ To unban a IP there are 2 options, remove this ban or remove ban + whitelist ip,
 The DB structure is like this:
 ```
 +----+--------+-------------+----------+----------+------+---------+-----------+------------+------------+------------+
-| id |added_by|   created   | jailname | protocol | port |    ip   | whitelist | host_host1 | host_host2 | host_host3 |
+| id |added_by|   created   | jailname | protocol | port |    ip   | whitelist | host_pUUID | host_pUUID | host_pUUID |
 +----+--------+-------------+----------+----------+------+---------+-----------+------------+------------+------------+
 | 1  | host.1 | date / time | postfix  |   tcp    |  587 | x.x.x.x |     1     |     1      |     0      |      4     |
 | 2  | host.2 | date / time | sshd     |   tcp    |  21  | x.x.x.x |     0     |     1      |     1      |      0     |
 | 3  | host.2 | date / time | sshd     |   tcp    |  21  | x.x.x.x |     2     |     1      |     0      |      4     |
 ```
-The columns for each `host/client` are created automatically the first time the python script runs on that host/client, the column name is taken from the machine hostname removing all `dots` and `hyphens`there is no need to manually add them to the DB.
+The columns for each `host` are created automatically the first time the python script runs on that host/client, the column name is taken from the machine UUID (first and last 5 characters) there is no need to manually add them to the DB.
+
+There is a second table that holds 1 record for each host (these records are created automatically) with;  
+`created` - date and time record was created  
+`hostname` - hosts hostname  
+`host_uuid` - taken from /etc/machine-id (if the file does not exists it will be   created automatically)  
+`host_id` - first and last 5 chars of the UUID, this is also used as the column name   for this host in the main table
 
 When fail2ban bans a IP it calls add2db.py which inserts a record in DB
 
@@ -78,9 +85,9 @@ To add to f2b readdb.py first `selects` all records `where` the host status for 
     * If the ban was not recent it ignores it and leaves the status at `0` (when the ban expires it will be banned again)
   * If there was an error adding it to the ban it sets it to status `3`
 
-To manually unban a ip use `removeip.py` this needs to be called with the ip and whitelist type (1 permenant whitelist, 2 remove current ban)
+To manually unban a ip use `removeip.py` this needs to be called with the ip and whitelist type (1 permanent whitelist, 2 remove current ban)
 for example;
-  * To unban and permantly whitelist a ip use `/path/to/removeip.py -i 192.168.1.25 -t 1`
+  * To unban and permanently whitelist a ip use `/path/to/removeip.py -i 192.168.1.25 -t 1`
   * To remove the IP from current ban use `/path/to/removeip.py -i 192.168.1.25 -t 2`
   * NOTE: removeip.py can ONLY be used for IP's that have an existing record in the DB it also CANNOT be used to whitelist a IP range.
     * (contributions to allow the above 2 exclusions are welcome)
@@ -120,22 +127,38 @@ This jail works by adding a iptables rule to log all connections to close ports,
 ### Only on DB HOST --->
 #### <a name="createdb">Creating the database:</a>
 
-1. Its advisable to secure the mysql installation, run the following command and follow the instructions `mysql_secure_installation`.
-2. Enter mysql root user (execute `mysql` from the command line) and create the db / table / user as follows.
-3. `CREATE DATABASE fail2ban;`
-4. `USE fail2ban;`
+1. Its advisable to secure the mysql installation, run the following command and follow the instructions `mysql_secure_installation`.  
+
+2. Enter mysql root user (execute `mysql` from the command line) and create the db / tables / user as follows.  
+
+3. `CREATE DATABASE fail2ban;`  
+
+4. `USE fail2ban;`  
+
+5. `CREATE TABLE IF NOT EXISTS host_table (`  
+&nbsp; &nbsp; `id bigint(20) unsigned NOT NULL AUTO_INCREMENT,`  
+&nbsp; &nbsp; `created datetime NOT NULL default CURRENT_TIMESTAMP,`  
+&nbsp; &nbsp; `host_name varchar(64) COLLATE utf8_unicode_ci NOT NULL,`  
+&nbsp; &nbsp; `host_uuid varchar(32) COLLATE utf8_unicode_ci NOT NULL,`  
+&nbsp; &nbsp; `host_id varchar(16) COLLATE utf8_unicode_ci NOT NULL,`  
+&nbsp; &nbsp; `PRIMARY KEY (id),`  
+&nbsp; &nbsp; `INDEX (host_uuid,host_id)`  
+`) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;`
+
 5. `CREATE TABLE IF NOT EXISTS ip_table (`  
 &nbsp; &nbsp; `id bigint(20) unsigned NOT NULL AUTO_INCREMENT,`  
-&nbsp; &nbsp; `added_by varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,`  
 &nbsp; &nbsp; `created datetime NOT NULL default CURRENT_TIMESTAMP,`  
+&nbsp; &nbsp; `added_by varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,`  
 &nbsp; &nbsp; `jailname text COLLATE utf8_unicode_ci NOT NULL,`  
 &nbsp; &nbsp; `protocol varchar(16) COLLATE utf8_unicode_ci NOT NULL,`  
 &nbsp; &nbsp; `port varchar(32) COLLATE utf8_unicode_ci NOT NULL,`  
 &nbsp; &nbsp; `ip varchar(64) COLLATE utf8_unicode_ci NOT NULL,`  
-&nbsp; &nbsp; `PRIMARY KEY (id),`  
-&nbsp; &nbsp; `KEY added_by (added_by,ip)`  
 &nbsp; &nbsp; `whitelist SMALLINT NOT NULL DEFAULT 0`  
-`) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;`  
+&nbsp; &nbsp; `PRIMARY KEY (id),`  
+&nbsp; &nbsp; `ADD INDEX (created),`  
+&nbsp; &nbsp; `ADD INDEX (ip),`  
+&nbsp; &nbsp; `ADD INDEX (whitelist)`  
+`) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;`  
 
 &nbsp;
 
@@ -170,22 +193,22 @@ Required:
 
 
 #### <a name="natforward">NAT FORWARD Config</a>
-For hosts that are a Firewall or forward NAT traffic, in order to block banned IP's from being forwarded you should add a FORWARD rule to the iptables chain as follows, in all files under `etc_files/fail2ban/action.d/` the FORWARD ules already exists there you just need to uncomment it and put the correcnt interface name instead of 'ppp+'
+For hosts that are a Firewall or forward NAT traffic, in order to block banned IP's from being forwarded you should add a FORWARD rule to the iptables chain as follows, in all files under `etc_files/fail2ban/action.d/` the FORWARD rules already exists there you just need to uncomment it and put the correcnt interface name instead of 'ppp+'
 
 &nbsp;
 
 #### <a name="f2bconfig">Configuring fail2ban</a>
-1. Configure your regular jails in your jail.local - some examples provided here in etc_files/fail2ban/jail.d/example_jail.local (if you make changes to the example file and want to use it, rename it remove "example" from the file name, same applies to other example files, if you want to use them rename them removeing "example" from the file name)
+1. Configure your regular jails in your jail.local - some examples provided here in etc_files/fail2ban/jail.d/example_jail.local (if you make changes to the example file and want to use it, rename it remove "example" from the file name, same applies to other example files, if you want to use them rename them removing "example" from the file name)
 2. If you are not intending to place the .py files directly in the /root/ dir update the paths in all files in etc_files/fail2ban/action.d/
 3. If you wont be using the portprobe jail change the `enabled = true` to `false` in etc_files/fail2ban/jail.d/central.local and comment the line in etc_files/rsyslog.d/iptables_port-probe.conf
 4. cd into the cloned git dir and copy all the config files, `rsync -av --exclude='example_*' etc_files/ /etc/`
-5. Make sure the jail log files exist before reloading fail2ban service `touch /var/log/{shared.log,iptables_portprobe.log}` and change owner `chown syslog:adm /var/log/{shared.log,iptables_portprobe.log}`
+5. Make sure the jail log files exist before reloading fail2ban service `touch /var/log/{shared.log,portprobe.log}` and change owner `chown syslog:adm /var/log/{shared.log,portprobe.log}`
 6. CRITICAL: read [Portprobe Jail](#portprobe) above to understand the iptables rules required, if you do not add the iptables rule correctly for your use-case you can end up banning all connections instantly!
 7. Update all the connection details in my_conn.py to match your DB.
 8. Copy the python scripts, cd into the cloned git dir and copy `cp *.py /root/` or other target dir of your choosing (see point #2 above)
-9. Restart fail2ban `systemctl restart fail2ban.service` - If adding to a new machine and the database is large (>20,000 ip's) its advisable to disable all jails and only enabling the 'shared' jail and allow readdb.py to finish as this can take a long time and be resource hungry this will also stop the new machine from adding records with IP's that already exist in the DB.
+9. Restart fail2ban `systemctl restart fail2ban.service` - If adding to a new machine and the database is large (>20,000 ip's) its advisable to temporarily disable all jails and only enabling the 'shared' jail and allow readdb.py to finish as this can take a long time and be resource hungry this will also stop the new machine from adding records with IP's that already exist in the DB.
 10. On all the hosts that will read the IP's from the db (readdb.py) add a cronjob to run every minute execute `crontab -e` and add;  
-`* * * * * python3 /root/readdb.py`  
+`* * * * * python3 /root/readdb.py >> /var/log/cronRun.log 2>&1`  
   * make sure to put correct path
   * make sure your crontab has lines similar to;
   ```
@@ -193,6 +216,7 @@ For hosts that are a Firewall or forward NAT traffic, in order to block banned I
      PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
   ```
 11. Optional - to set a record as expired (>25 days) add a cronjob on the machine hosting the DB to run setold.py every hour to update all records where the hosts has not yet added this IP (this will only update the host record where the status = 0)    
+`01 * * * * python3 /root/setold.py >> /var/log/cronRun.log 2>&1`
 
 &nbsp;
 
@@ -208,6 +232,13 @@ To ban IP's that try to login to Roundcube using non-existent accounts add this 
 Test your amended filter files before reloading fail2ban service using `"fail2ban-regex -v /path/to/logfile /etc/fail2ban/filder.d/path/to/filter"`
 
 &nbsp;
+
+### <a name="issues">Issues</a>
+1. On some clients when python will try to connect to the mysql server it throws an error
+```
+mysql.connector.errors.ProgrammingError: 1045 (28000): Access denied for user 'f2ban'@'192.168.0.10' (using password: YES)
+```
+I did not find any help on search engines but comparing the versions (`pip3 show mysql-connector-python`) on my various clients I noticed that on the one that it fails it had version 2.1.6 vs the others that worked had version 8.0.xx to resolve just run `pip3 install --upgrade mysql-connector-python` - I cannot figure out why in some instances pip3 will initially install such an old version
 
 ### <a name="todo">TODO:</a>
 1. Implement repeat offender punishment for bad logins that can easily be legitimate users that are bad with passwords, start the ban at 15 minutes / 1 day and work the way up to 25 days
