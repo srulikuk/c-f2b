@@ -18,6 +18,7 @@ my_host_name = socket.gethostname()
 def get_uuid():
     global my_host_uuid
     global my_host_id
+    global my_host_id_col
     try:
         with open("/etc/machine-id", 'r') as uuid_file:
             my_host_uuid = uuid_file.read().strip()
@@ -92,7 +93,7 @@ def main():
     con.close()
 
     db.ping(reconnect=True, attempts=3, delay=150)
-    conn.autocommit = false
+    cursor.autocommit = False
     cursor = db.cursor()
     update = """
     UPDATE ip_table
