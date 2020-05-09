@@ -41,6 +41,7 @@ args = parser.parse_args()
 def get_uuid():
     global my_host_uuid
     global my_host_id
+    global my_host_id_col
     try:
         with open("/etc/machine-id", 'r') as uuid_file:
             my_host_uuid = uuid_file.read().strip()
@@ -71,7 +72,7 @@ def main():
 
     # Check if column exists for this host else add
 #    querycol = """SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'fail2ban' AND TABLE_NAME = 'ip_table' AND COLUMN_NAME = '{}'""".format('{}'.format("host_"+table_hostname))
-    conn.autocommit = false
+    cursor.autocommit = False
     db.ping(reconnect=True, attempts=3, delay=150)
     cursor = db.cursor()
     querycol = """
@@ -132,10 +133,10 @@ def main():
             db.commit()
 
         except mysql.connector.Error as err:
-	        print("Something went wrong: {}".format(err))
+            print("Something went wrong: {}".format(err))
 	        # If the columnn does not exist and we cannot add it exit
             db.rollback()
-	        sys.exit(1)
+            sys.exit(1)
 
 
     # Before adding to DB make sure this IP has not been permenantly whitelists - if yes undo ban action and exit

@@ -36,6 +36,7 @@ db = mysql.connector.connect(
 def get_uuid():
     global my_host_uuid
     global my_host_id
+    global my_host_id_col
     try:
         with open("/etc/machine-id", 'r') as uuid_file:
             my_host_uuid = uuid_file.read().strip()
@@ -72,7 +73,7 @@ def main():
 	#         # If the columnn does not exist and we cannot add it exit
     #     db.close()
     #     sys.exit(1)
-    conn.autocommit = false
+    cursor.autocommit = False
     db.ping(reconnect=True, attempts=3, delay=150)
     cursor = db.cursor()
     querycol = """
