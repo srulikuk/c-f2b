@@ -43,7 +43,7 @@ def parg():
             '-i', type=ipaddress.ip_address, action="store", dest="ip", required=True, help=arg_msg
         )
         parser.add_argument(
-            '-t', type-int, action="store", dest="remove_type", required=True
+            '-t', type=int, action="store", dest="remove_type", required=True
         )
 
     args = parser.parse_args()
