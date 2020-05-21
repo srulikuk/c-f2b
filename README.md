@@ -199,13 +199,13 @@ For hosts that are a Firewall or forward NAT traffic, in order to block banned I
 
 #### <a name="f2bconfig">Configuring fail2ban</a>
 1. Configure your regular jails in your jail.local - some examples provided here in etc_files/fail2ban/jail.d/example_jail.local (if you make changes to the example file and want to use it, rename it remove "example" from the file name, same applies to other example files, if you want to use them rename them removing "example" from the file name)
-2. If you are not intending to place the .py files in /root/central-f2b dir update the paths in all files in etc_files/fail2ban/action.d/
+2. If you are not intending to place the .py files in /root/c-f2b dir update the paths in all files in etc_files/fail2ban/action.d/
 3. If you wont be using the portprobe jail change the `enabled = true` to `false` in etc_files/fail2ban/jail.d/central.local and comment the line in etc_files/rsyslog.d/iptables_port-probe.conf
 4. cd into the cloned git dir and copy all the config files, `rsync -av --exclude='example_*' etc_files/ /etc/`
 5. Make sure the jail log files exist before reloading fail2ban service `touch /var/log/{shared.log,portprobe.log}` and change owner `chown syslog:adm /var/log/{shared.log,portprobe.log}`
 6. CRITICAL: read [Portprobe Jail](#portprobe) above to understand the iptables rules required, if you do not add the iptables rule correctly for your use-case you can end up banning all connections instantly!
 7. Update all the connection details in my_conn.py to match your DB.
-8. Copy the python scripts, cd into the cloned git dir and copy `cp -r central-f2b /root/` and rename the myconn.py file so it does not get overwritten on next pull `mv myconn.py lc_myconn.py` or other target dir of your choosing (see point #2 above)
+8. Copy the python scripts, cd into the cloned git dir and copy `cp -r c-f2b /root/` and rename the myconn.py file so it does not get overwritten on next pull `mv myconn.py lc_myconn.py` or other target dir of your choosing (see point #2 above)
 9. Restart fail2ban `systemctl restart fail2ban.service` - If adding to a new machine and the database is large (>20,000 ip's) its advisable to temporarily disable all jails and only enabling the 'shared' jail and allow readdb.py to finish as this can take a long time and be resource hungry this will also stop the new machine from adding records with IP's that already exist in the DB.
 10. On all the hosts that will read the IP's from the db (readdb.py) add a cronjob to run every minute execute `crontab -e` and add;  
 `* * * * * python3 /root/readdb.py >> /var/log/cronRun.log 2>&1`  
@@ -216,7 +216,7 @@ For hosts that are a Firewall or forward NAT traffic, in order to block banned I
      PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
   ```
 11. Optional - to set a record as expired (>25 days) add a cronjob on the machine hosting the DB to run setold.py every hour to update all records where the hosts has not yet added this IP (this will only update the host record where the status = 0)    
-`01 * * * * python3 /root/central-f2b/setold.py >> /var/log/cronRun.log 2>&1`
+`01 * * * * python3 /root/c-f2b/setold.py >> /var/log/cronRun.log 2>&1`
 
 &nbsp;
 
