@@ -35,7 +35,7 @@ def main():
     WHERE ip = '{}'
     AND whitelist = '1'
     """.format(
-        ip
+        parg.ip
     )
     cursor.execute(querywht)
 
@@ -44,7 +44,7 @@ def main():
         s = CSocket("/run/fail2ban/fail2ban.sock")
         # f2bcmd = ("fail2ban-client set " + jailname + " unbanip " + ip)
         # subprocess.run(f2bcmd, shell=True)
-        s.send(["unban", ip])
+        s.send(["unban", parg.ip])
         s.close()
         sys.exit(0)
 
@@ -59,9 +59,9 @@ def main():
                 VALUES (
                     '{}','{}','{}','{}','{}','{}'
                 )""".format(
-                    {},my_host_name,jailname,protocol,port,ip,dst_ip,1
+                    {},my_host_name,parg.jn,parg.prt,parg.port,parg.ip,parg.d_ip,1
                 ).format(
-                    my_host_id_col
+                    suuid.col_id
                 )
 
             else:
@@ -72,9 +72,9 @@ def main():
                 VALUES (
                     '{}','{}','{}','{}','{}','{}'
                 )""".format(
-                    {},my_host_name,jailname,protocol,port,ip,1
+                    {},my_host_name,parg.jn,parg.prt,parg.port,parg.ip,1
                 ).format(
-                    my_host_id_col
+                    suuid.col_id
                 )
 
             cursor.execute(addtodb)
