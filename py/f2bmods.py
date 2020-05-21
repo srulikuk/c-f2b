@@ -10,7 +10,7 @@ def suuid():
             uuid_file.write(h_uuid)
     suuid.uuid = h_uuid
     suuid.id = h_uuid[0:5] + "_" + h_uuid[27:32]
-    suuid.col_id = ("host_test"+suuid.id)
+    suuid.col_id = ("host"+suuid.id)
 
 # parg - Passed Arguments
 def parg():
