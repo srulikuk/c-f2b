@@ -20,7 +20,7 @@ def parg():
 
     parser = argparse.ArgumentParser()
 
-    if sys.argv[0] not in "removeip.py":
+    if "removeip.py" not in sys.argv[0]:
         parser.add_argument(
             '-j', action="store", dest="jailname"
         )
@@ -51,7 +51,7 @@ def parg():
     parg.ip = str(args.ip)
 
     # The following are only in use for removeip.py
-    if sys.argv[0] not in "removeip.py":
+    if "removeip.py" not in sys.argv[0]:
         parg.jn = args.jailname
         parg.prt = args.protocol
         parg.port = args.port
