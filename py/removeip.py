@@ -27,7 +27,7 @@ def main():
     parg()
     # Open a socket to fail2ban
     s = CSocket("/run/fail2ban/fail2ban.sock")
-    s.send(["unban", rem.ip])
+    s.send(["unban", parg.ip])
 #    f2bcmd1 = ("fail2ban-client unban " + parg.ip)
 #    subprocess.run(f2bcmd1, shell=True)
     # If type is permenant unban add IP to ignore list
