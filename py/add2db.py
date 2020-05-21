@@ -23,10 +23,9 @@ db = mysql.connector.connect(
 def main():
     suuid()
     parg()
-    cursor.autocommit = False
     db.ping(reconnect=True, attempts=3, delay=150)
     cursor = db.cursor()
-
+    cursor.autocommit = False
     # Before adding to DB make sure this IP has not been permenantly whitelisted - if yes undo ban action and exit
     # The only real way fail2ban could have banned a whitelisted ip is if it was whitelisted in the last 60 seconds
     # Hence its not yet in the local fail2ban ignore list or readdb.py isnt running as expected every 60 seconds.

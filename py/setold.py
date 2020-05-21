@@ -29,9 +29,9 @@ db = mysql.connector.connect(
 )
 
 def main():
-    conn.autocommit = false
     db.ping(reconnect=True, attempts=3, delay=150)
     cursor = db.cursor()
+    cursor.autocommit = false
     getcol = """
     SELECT host_id
     FROM host_table

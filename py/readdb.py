@@ -32,10 +32,9 @@ db = mysql.connector.connect(
 
 def main():
     suuid()
-    cursor.autocommit = False
 #    db.ping(reconnect=True, attempts=3, delay=150)
     cursor = db.cursor()
-
+    cursor.autocommit = False
     # Query the DB for new BAD ip's
     for i in range(0, 2):
         try:
