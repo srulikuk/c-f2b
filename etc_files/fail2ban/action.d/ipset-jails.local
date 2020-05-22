@@ -57,7 +57,7 @@ actionstop = <iptables> -D <chain> -m set --match-set <ipmset> src -j <blocktype
 #
 actionban = ipset add <ipmset> <ip> timeout <bantime> -exist
             if [ '<restored>' = '0' ]; then
-            python3 /root/add2db.py -j <name> -pr <protocol> -p <port> -i <ip>
+            python3 /root/c-f2b/py/add2db.py -j <name> -pr <protocol> -p <port> -i <ip>
             fi
 
 # Option:  actionunban

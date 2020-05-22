@@ -4,7 +4,8 @@ import os
 import mysql.connector
 import datetime
 from tendo import singleton
-import my_conn
+import lc_myconn as my_conn
+from f2bmods import suuid
 
 # for log file print date/CURRENT_TIMESTAMP
 now = datetime.datetime.now()
@@ -27,30 +28,10 @@ db = mysql.connector.connect(
     db=(my_conn.db)
 )
 
-# get UUID
-def get_uuid():
-    global my_host_uuid
-    global my_host_id
-    try:
-        with open("/etc/machine-id", 'r') as uuid_file:
-            my_host_uuid = uuid_file.read().strip()
-    except FileNotFoundError:
-        import uuid
-        my_host_uuid = uuid.uuid1().hex
-        with open("/etc/machine-id", 'a') as uuid_file:
-            uuid_file.write(my_host_uuid)
-    mhu = my_host_uuid
-    my_host_id = mhu[0:5] + "_" + mhu[27:32]
-    my_host_id_col = ("host_"+my_host_id_col)
 def main():
-    conn.autocommit = false
+    db.ping(reconnect=True, attempts=3, delay=150)
     cursor = db.cursor()
-    # getcol = """
-    # SELECT column_name
-    # FROM information_schema.columns
-    # WHERE table_name = 'ip_table'
-    # AND column_name LIKE 'host_%'
-    # """
+    cursor.autocommit = false
     getcol = """
     SELECT host_id
     FROM host_table
@@ -65,7 +46,7 @@ def main():
         WHERE {0} = '0'
         AND DATE_SUB(CURDATE(),INTERVAL 25 DAY) >= created
         """.format(
-            '{}'.format("host_"+col)
+            suuid.col_id
         )
         cursor.execute(update)
         db.commit()

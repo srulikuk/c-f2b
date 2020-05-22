@@ -56,9 +56,9 @@ actionstop = <iptables> -D <chain> -m set --match-set <ipmset> src -j <blocktype
 actionban = ipset add <ipmset> <ip> timeout <bantime> -exist
             if [ '<restored>' = '0' ]; then
 # if writing destination ip to db uncomment the following line
-#            python3 /root/add2db.py -j <name> -pr <F-PROTO> -p <F-PORT> -i <ip> -d <F-DST>
+#            python3 /root/c-f2b/py/add2db.py -j <name> -pr <F-PROTO> -p <F-PORT> -i <ip> -d <F-DST>
 # if NOT writing dest ip to db comment previous line and uncomment the following line
-            python3 /root/add2db.py -j <name> -pr <F-PROTO> -p <F-PORT> -i <ip>
+            python3 /root/c-f2b/py/add2db.py -j <name> -pr <F-PROTO> -p <F-PORT> -i <ip>
             fi
 
 # Option:  actionunban

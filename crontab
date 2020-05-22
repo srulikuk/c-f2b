@@ -1,7 +1,7 @@
 SHELL=/bin/bash
 PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
 
-* * * * * python3 /root/readdb.py >> /var/log/cronRun.log 2>&1
+* * * * * python3 /root/c-f2b/py/readdb.py >> /var/log/cronRun.log 2>&1
 
 # On machine hosting the DB run the following each hour to update old records to old status
-01 * * * * python3 /root/setold.py >> /var/log/cronRun.log 2>&1
+01 * * * * python3 /root/c-f2b/py/setold.py >> /var/log/cronRun.log 2>&1
