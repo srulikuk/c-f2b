@@ -135,19 +135,19 @@ def main():
             rem_ip = (row[1])
             rem_type = (row[2])
             row
-                # Run the unban command
-                # f2bcmd1 = ("fail2ban-client unban " + rem_ip)
-                # subprocess.run(f2bcmd1, shell=True)
-                s.send(["unban", rem_ip])
-                if rem_type == 1:
-                    # If type is permenant unban add IP to ignore list
-                    # f2bcmd2 = ("fail2ban-client set " + row[0] + " addignoreip " + rem_ip)
-                    # subprocess.run(f2bcmd2, shell=True)
-                    for jname in jails:
-                        s.send(['set', jname, 'addignoreip', rem_ip])
-                    with open("/etc/fail2ban/jail.d/whitelist.local", "r+") as whitelist:
-                        if rem_ip not in whitelist.read():
-                            whitelist.write(' {}\n'.format(rem_ip,))
+            # Run the unban command
+            # f2bcmd1 = ("fail2ban-client unban " + rem_ip)
+            # subprocess.run(f2bcmd1, shell=True)
+            s.send(["unban", rem_ip])
+            if rem_type == 1:
+                # If type is permenant unban add IP to ignore list
+                # f2bcmd2 = ("fail2ban-client set " + row[0] + " addignoreip " + rem_ip)
+                # subprocess.run(f2bcmd2, shell=True)
+                for jname in jails:
+                    s.send(['set', jname, 'addignoreip', rem_ip])
+                with open("/etc/fail2ban/jail.d/whitelist.local", "r+") as whitelist:
+                    if rem_ip not in whitelist.read():
+                        whitelist.write(' {}\n'.format(rem_ip,))
 
             updaterem = """
             UPDATE ip_table
