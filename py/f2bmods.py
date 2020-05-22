@@ -20,6 +20,8 @@ def parg():
 
     parser = argparse.ArgumentParser()
 
+    # Use different args if executing removeip
+    # If not called by removeip create the following vars
     if "removeip.py" not in sys.argv[0]:
         parser.add_argument(
             '-j', action="store", dest="jailname"
@@ -37,7 +39,7 @@ def parg():
             '-i', action="store", dest="ip"
         )
     else:
-        # The following are only in use for removeip.py
+        # If called by removeip create the follwoing instead
         arg_msg="Example - 'python3 /root/removeip.py -i 192.168.1.1 -t 1'. \nFor -t type arg use 1 for permenant whitelist, 2 for remove ban only"
         parser.add_argument(
             '-i', type=ipaddress.ip_address, action="store", dest="ip", required=True, help=arg_msg
@@ -50,13 +52,14 @@ def parg():
 
     parg.ip = str(args.ip)
 
-    # The following are only in use for removeip.py
+    # If not called by removeip create the following vars
     if "removeip.py" not in sys.argv[0]:
         parg.jn = args.jailname
         parg.prt = args.protocol
         parg.port = args.port
         parg.d_ip = args.dest_ip
     else:
+        # If called by removeip create the follwoing instead
         parg.type = args.remove_type
         if parg.type not in (1,2):
             print("FAILED: "+ arg_msg)
@@ -64,7 +67,7 @@ def parg():
     # End of removeip.py requirements
 
 
-# ncol - New Column (add System UUID + New column for this system to DB)
+# ncol - New Column (add System UUID to host_table + New column for this in ip_table)
 def ncol(cursor, db, my_host_name):
     suuid()
     import mysql.connector

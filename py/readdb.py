@@ -10,8 +10,8 @@ import lc_myconn as my_conn
 from f2bmods import suuid
 
 # for log file print date/CURRENT_TIMESTAMP
-now = datetime.datetime.now()
-print ("\nreaddb.py Start at: " + now.strftime("%Y-%m-%d %H:%M:%S"))
+# now = datetime.datetime.now()
+# print ("\nreaddb.py Start at: " + now.strftime("%Y-%m-%d %H:%M:%S"))
 
 my_host_name = socket.gethostname()
 
@@ -32,7 +32,6 @@ db = mysql.connector.connect(
 
 def main():
     suuid()
-#    db.ping(reconnect=True, attempts=3, delay=150)
     cursor = db.cursor()
     cursor.autocommit = False
     # Query the DB for new BAD ip's
@@ -67,6 +66,8 @@ def main():
         try:
             # First check if the IP is already in ipset as it might have been added to DB from a different host / jail
             ## Would be ideal is this could be done in python rather then subproccess
+            ### fail2ban github issue 2725 added the possiblility to query this from fail2ban directly
+            ### not sure when this will come upstream https://github.com/fail2ban/fail2ban/issues/2725#issuecomment-631519265
             oscmd = subprocess.check_output("ipset list | grep -m1 " + row_ip, universal_newlines=True, shell=True)
             result = oscmd.split(' ')
             # If the ip exists in ipset and the ban is still more then 11 days (of an original 25 days) set it to ignore (code:2)
@@ -136,13 +137,9 @@ def main():
             rem_type = (row[2])
             row
             # Run the unban command
-            # f2bcmd1 = ("fail2ban-client unban " + rem_ip)
-            # subprocess.run(f2bcmd1, shell=True)
             s.send(["unban", rem_ip])
             if rem_type == 1:
                 # If type is permenant unban add IP to ignore list
-                # f2bcmd2 = ("fail2ban-client set " + row[0] + " addignoreip " + rem_ip)
-                # subprocess.run(f2bcmd2, shell=True)
                 for jname in jails:
                     s.send(['set', jname, 'addignoreip', rem_ip])
                 with open("/etc/fail2ban/jail.d/whitelist.local", "r+") as whitelist:

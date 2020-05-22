@@ -5,7 +5,6 @@ import os
 import socket
 import subprocess
 import ipaddress
-#import sqlite3
 import mysql.connector
 import lc_myconn as my_conn
 from f2bmods import suuid, parg
@@ -28,8 +27,6 @@ def main():
     # Open a socket to fail2ban
     s = CSocket("/run/fail2ban/fail2ban.sock")
     s.send(["unban", parg.ip])
-#    f2bcmd1 = ("fail2ban-client unban " + parg.ip)
-#    subprocess.run(f2bcmd1, shell=True)
     # If type is permenant unban add IP to ignore list
     if parg.type == 1:
         # Add to f2b live ignoreip (f2b wont read whitelist file until reload)
@@ -37,11 +34,10 @@ def main():
         jails = s.send(["status"])[1][1][1]
         jails = jails.split(", ")
         for jname in jails:
-            # f2bcmd2 = ("fail2ban-client set " + row[0] + " addignoreip " + parg.ip)
-            # subprocess.run(f2bcmd2, shell=True)
             s.send(['set', jname, 'addignoreip', rem_ip])
     s.close()
 
+    # Update the db that we have processed for this host
     db.ping(reconnect=True, attempts=3, delay=150)
     cursor = db.cursor()
     update = """
@@ -54,6 +50,7 @@ def main():
     cursor.execute(update)
     db.commit()
     if parg.type == 1:
+        # If remove type = 1 (permenant unban) add to whitelist file
         with open("/etc/fail2ban/jail.d/whitelist.local", "r+") as whitelist:
             if parg.ip not in whitelist.read():
                 whitelist.write(' {}\n'.format(parg.ip,))
