@@ -2,7 +2,6 @@ import os
 import sys
 import socket
 import datetime
-import subprocess
 import mysql.connector
 from mysql.connector import errorcode
 import lc_myconn as my_conn
@@ -42,15 +41,16 @@ def main():
     if cursor.fetchone()[0] != 0:
         from fail2ban.client.csocket import CSocket
         s = CSocket("/run/fail2ban/fail2ban.sock")
-        # f2bcmd = ("fail2ban-client set " + jailname + " unbanip " + ip)
-        # subprocess.run(f2bcmd, shell=True)
         s.send(["unban", parg.ip])
         s.close()
         sys.exit(0)
 
     # Update DB with new IP and params
+    # Using a loop in case this host does not yet exist in DB in which case the except will add it
+    # and on the second loop the record will be added, if host does exist loop will break
     for i in range(0, 2):
         try:
+            # If fail2ban passed the destination IP use this query, else use the next one
             if parg.d_ip:
                 addtodb = """
                 INSERT INTO ip_table (
@@ -83,6 +83,7 @@ def main():
             break
         except mysql.connector.Error as err:
             if err.sqlstate == "42S22":
+                # If host does not exist in DB add it
                 from f2bmods import ncol
                 ncol(cursor, db, my_host_name)
 
