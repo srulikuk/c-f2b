@@ -47,9 +47,8 @@ def main():
             ORDER BY id
             """.format(
                 suuid.col_id
-            cursor.execute(query)
             break
-
+            cursor.execute(query)
         # If there is an error that column does not exist for this host add it.
         except mysql.connector.Error as err:
             if err.sqlstate == "42S22":
