@@ -8,8 +8,8 @@ import lc_myconn as my_conn
 from f2bmods import suuid
 
 # for log file print date/CURRENT_TIMESTAMP
-now = datetime.datetime.now()
-print ("setold.py Start at: " + print (now.strftime("%Y-%m-%d %H:%M:%S"))
+# now = datetime.datetime.now()
+# print ("setold.py Start at: " + print (now.strftime("%Y-%m-%d %H:%M:%S"))
 
 my_host_name = socket.gethostname()
 
