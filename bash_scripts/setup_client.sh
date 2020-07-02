@@ -8,7 +8,7 @@ cleanup()
   if ((exit_success == 1)) ; then
     # If new config directories were created delete them
     if [[ -n $new_lc ]] ; then
-      for d in fail2ban misc ; do
+      for d in fail2ban iptables ; do
         if [[ -d ${m_dir}/lc_${d}_${new_lc} ]] ; then
           if [[ -z $delete_me ]] ; then
             printf 'Script exiting with error, delete config files created in this run? [y/n] > '
@@ -382,12 +382,16 @@ if [[ ${r[3]} =~ ^(y|yes)$ ]] ; then
   host? [y/n] > '
   read -r test_script
   if [[ ${test_script,,} =~ ^(y|yes)$ ]] ; then
-    mkdir -p "${m_dir}/lc_misc_${new_lc}/"
-    iptables_script="portprobe_iptables.sh"
-    if ! cp "${m_dir}/misc/${iptables_script}" "${m_dir}/lc_misc_${new_lc}/" ; then
+    mkdir -p "${m_dir}/lc_iptables_${new_lc}/"
+    iptables_script="iptables.sh"
+#    if ! cp "${m_dir}/misc/${iptables_script}" "${m_dir}/lc_misc_${new_lc}/" ; then
+    if ! cp -r "${m_dir}/iptables" "${m_dir}/lc_iptables_${new_lc}" ; then
       exit_msg+=("There is an issue with your cloned dir, I give up")
       exit
     fi
+    # Update path in iptables wrapper
+    sed -i "s,/root/c-f2b/iptables/,${m_dir}/lc_iptables_${new_lc}/," "${m_dir}/lc_iptables_${new_lc}/wrapper.sh"
+
     # Get the wan interfaces
     getWan
     printf '
@@ -398,7 +402,7 @@ if [[ ${r[3]} =~ ^(y|yes)$ ]] ; then
   \n# OUTPUT BELOW #\n\n'
 
     # First update the script with the interfaces
-    iptables_script="${m_dir}/lc_misc_${new_lc}/${iptables_script}"
+    iptables_script="${m_dir}/lc_iptables_${new_lc}/${iptables_script}"
     if [[ -n ${iface_list[*]} ]] ; then
       i_list=("${iface_list[@]}")
     else
@@ -463,7 +467,7 @@ NOTE: You will need to install "Attack Detector" from the market place first' "$
         else # not clearOS
           printf '
 You can make an alias or wrapper to execute the iptables rules each time
-you add or remove a rule from iptables, the wrapper is at %s\n' "${m_dir}/misc/iptables_wrapper.sh"
+you add or remove a rule from iptables, the wrapper is at %s\n' "${m_dir}/iptables/wrapper.sh"
         fi
 
         # update the config files
