@@ -84,11 +84,11 @@ getWan()
   fi
   # if there are more interfaces ask user
   if [[ -z $iface_name ]] ; then
+    printf '\nINTERFACES:\n'
     ip -o l show | awk '! /lo:/{print "   - "$2}'
-    printf '
- Enter the name(s) of your WAN interface(s)
+    printf 'Enter the name(s) of your WAN interface(s)
  For MULTI-WAN enter the names space seperated;
-  [Example: "eth0" for multi-wan "ppp0 ppp1"] > '
+ [Example: "eth0" for multi-wan "ppp0 ppp1"] > '
     read -ra iface_name
     # Check how many rules need to be created based on the number of wan interfaces
     # check if multiple wan's provided
@@ -105,7 +105,7 @@ getWan()
         # Check if the common name is only in use for those that have been selected for multi wan
         local total_count
         total_count=$(ip -o l show | awk -v x="${iface_name[0]%%+([0-9])}" -F':' '$2 ~ x {count++} END{print count}')
-        if ((${#iface_name[@]} = total_count)) ; then
+        if ((${#iface_name[@]} == total_count)) ; then
           iface_name+=("${iface_name[0]::-1}+")
           iface_list=("${iface_name[@]}")
           iface_name=("${iface_name[-1]}")
@@ -391,7 +391,7 @@ if [[ ${r[3]} =~ ^(y|yes)$ ]] ; then
     fi
     # Update path in iptables wrapper
     sed -i "s,/root/c-f2b/iptables/,${m_dir}/lc_iptables_${new_lc}/," "${m_dir}/lc_iptables_${new_lc}/wrapper.sh"
-    iptables_script="iptables.sh"
+    iptables_script="rules.sh"
 
     # Get the wan interfaces
     getWan

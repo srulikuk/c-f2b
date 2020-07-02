@@ -167,7 +167,7 @@ addRules()
 	fi
 }
 
-RunScript() # in a function so it can be sourced
+runScript() # in a function so it can be sourced
 {
 	shopt -q extglob || shopt -s extglob # turn on extglob
 
