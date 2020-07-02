@@ -266,8 +266,8 @@ runScript() # in a function so it can be sourced
 			if [[ $auto_save != y ]] ; then
 				# Ask if to save iptables rules
 				printf '
-	Write the new rules to file (netfilter-persistant)?
-	USE CAUTION when saving iptables rules!  [y/n] > '
+Write the new rules to file (netfilter-persistant)?
+USE CAUTION when saving iptables rules!  [y/n] > '
 				read -r net_save
 			fi
 
@@ -286,5 +286,10 @@ runScript() # in a function so it can be sourced
 	fi
 }
 
-runScript
+if [[ -z $1 ]] ; then
+	runScript
+else
+	test_mode="y"
+fi
+
 "$@"

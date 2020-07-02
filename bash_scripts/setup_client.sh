@@ -86,9 +86,9 @@ getWan()
   if [[ -z $iface_name ]] ; then
     printf '\nINTERFACES:\n'
     ip -o l show | awk '! /lo:/{print "   - "$2}'
-    printf 'Enter the name(s) of your WAN interface(s)
- For MULTI-WAN enter the names space seperated;
- [Example: "eth0" for multi-wan "ppp0 ppp1"] > '
+    printf 'From the list  above enter  the name(s)  of  your
+WAN interface(s) (MULTI-WAN enter space seperated)
+[Example: "eth0" for multi-wan "ppp0 ppp1"] > '
     read -ra iface_name
     # Check how many rules need to be created based on the number of wan interfaces
     # check if multiple wan's provided
@@ -216,7 +216,7 @@ fi
 # q = main question text, qr = text response to q, qe = valid responses
 # if the qr response is called the next step is always "exit"
 
-q[0]="Will $m_dir remain the dir for\n the c-f2b scripts? [y/n] > "
+q[0]="Will $m_dir remain the dir for\nthe c-f2b scripts? [y/n] > "
 qr[0]='Place the c-f2b dir in the path you intend it to remain and try again'
 qe[0]='(y|yes|n|no)'
 
@@ -418,9 +418,7 @@ if [[ ${r[3]} =~ ^(y|yes)$ ]] ; then
 
     # execute the script in test mode
     test_mode="y"
-    source "$iptables_script"
-    # "$iptables_script" test_ip "$pf_name"
-    "$iptables_script" runScript
+    source "$iptables_script" runScript
     if [[ $test_pass == n ]] ; then
       printf '
 The script did not return any ports in use, either
@@ -433,7 +431,7 @@ The script did not return any ports in use, either
  To use portprobe you will need to implement the iptables rules manually
  and enable the portprobe jail.\n
  Failed  to  configure  portprobe,  do you  want  to  continue  without
- portprobe or exit? [c=continue/e=exit] > '  "$iptables_script"
+ portprobe or exit? [c=continue/e=exit] > '  "${c_dir}/iptables/iptables.sh"
       read -r con_exit
 
       if ! [[ ${con_exit,,} =~ ^(c|continue|e|exit)$ ]] ; then
