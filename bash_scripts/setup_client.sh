@@ -11,7 +11,7 @@ cleanup()
       for d in fail2ban iptables ; do
         if [[ -d ${m_dir}/lc_${d}_${new_lc} ]] ; then
           if [[ -z $delete_me ]] ; then
-            printf 'Script exiting with error, delete config files created in this run? [y/n] > '
+            printf '\nScript exiting with error, delete config files created in this run? [y/n] > '
             read -r delete_me
           fi
           if [[ ${delete_me,,} =~ ^(y|yes)$ ]] ; then
@@ -131,14 +131,14 @@ diffCheck()
   if [[ $show_options = 1 ]] ; then
     printf '\nOverwrite previous version of %s with newer file %s\n  - show diff=d, keep existing=k, overwrite=o [d/k/o] > ' "$1" "$2"
     read -r diff_do
-    if [[ ${diff_do,,} = "d" ]] ; then
+    if [[ ${diff_do,,} == d ]] ; then
       printf '%s\n' "$file_diff"
       printf 'Keep exixsting=k, Overwrite=o [k/o] > '
       read -r diff_do
     fi
   fi
   if [[ $show_options = 1 ]] ; then
-    if [[ ${diff_do,,} != "o" ]] ; then
+    if [[ ${diff_do,,} != o ]] ; then
       printf '\nKeeping existing file.\n'
     else
       cp "$2" "$1"
@@ -286,7 +286,7 @@ if ! rsync -a "${m_dir}/etc_files/fail2ban/" "${m_dir}/lc_fail2ban_${new_lc}/" ;
   exit
 else
   # Set the path to py files in fail2ban configs
-  if ! [[ $m_dir == "/root/c-f2b" ]] ; then
+  if ! [[ $m_dir == /root/c-f2b ]] ; then
     sed -i "s,/root/c-f2b/py,${m_dir}/py," "${m_dir}/lc_fail2ban_${new_lc}/action.d/"*
   fi
 fi
@@ -304,7 +304,7 @@ fi
 if [[ -z ${v_pkg[fail2ban]} ]] ; then
   v_pkg[fail2ban]="$(${pkg_m}_v "fail2ban")"
 fi
-if [[ $pkg_m = "apt" ]] ; then
+if [[ $pkg_m = apt ]] ; then
   if dpkg --compare-versions "$f2b_v" gt "${v_pkg[fail2ban]}"; then
     exit_msg+=("Fail2Ban version > $f2b_v is required, installed version = ${v_pkg[fail2ban]}")
     exit
@@ -325,7 +325,7 @@ if [[ ${r[2]} =~ ^(y|yes)$ ]] ; then
   fi
 fi
 # Make sure pip3 version of mysql-connector-python is > 8 (regardless if user opted to install)
-printf '\nVeryfying pip3 mysql-connector version...\n'
+printf '\nVeryfying pip3 mysql-connector version...\n\n'
 if [[ -z ${v_pip[mysql-connector-python]} ]] ; then
   v_pip[mysql-connector-python]="$(pip3 show "mysql-connector-python")"
 fi
@@ -421,7 +421,7 @@ if [[ ${r[3]} =~ ^(y|yes)$ ]] ; then
     source "$iptables_script"
     # "$iptables_script" test_ip "$pf_name"
     "$iptables_script" runScript
-    if [[ $test_pass == "n" ]] ; then
+    if [[ $test_pass == n ]] ; then
       printf '
 The script did not return any ports in use, either
  - You are not using iptables to open ports, or
@@ -459,7 +459,7 @@ If the output was satisfactory do you want to add the iptables rule now? [y/n] >
         systemctl restart rsyslog
 
         # message about autoamting the script
-        if [[ ${clear_os} = "y" ]] ; then # if clearOS print the following
+        if [[ ${clear_os} == y ]] ; then # if clearOS print the following
           printf '
 To run the iptables script automatically after adding / removing a rule
 add the path to %s in
@@ -680,7 +680,7 @@ diffCheck "/etc/logrotate.d/" "${m_dir}/etc_files/logrotate.d/custom-f2b-logs"
 touch /var/log/cronRun.log
 
 # Install crontab
-if [[ $install_cron = "y" ]] ; then
+if [[ $install_cron == y ]] ; then
   # Remove old cronjobs for this first
   crontab -l | grep -v 'python3 .*/py/readdb.py' | crontab
   # Add cronjob

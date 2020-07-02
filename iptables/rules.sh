@@ -29,7 +29,7 @@ delRules()
 	# in case of opening/closing a new port, logging for that port
 	# should be removed, also to avoid duplicate rules
 	# Get number of portprobe rules from iptables
-	if [[ $test_mode != "y" ]] ; then # extra check not to run in test_mode
+	if [[ $test_mode != y ]] ; then # extra check not to run in test_mode
 		del_rules=$(iptables -L INPUT --line-numbers | grep -c "Probe on closed port:")
 		# Each time a rule gets deleted the rule numbers changes for the
 		# rest so delete 1 by 1 and get the next rule number after delete.
@@ -72,7 +72,7 @@ checkPorts()
 			if ! [[ $port =~ ^([0-9]{1,5})$ ]] || ((port > 65535)) ; then
 				if [[ $test_mode = y ]] ; then
 					printf '\Got an invalid port number "%s"\nThe full output for ports was;\nTCP: %s\nUDP: %s\n' "$port" "${tcp_list[@]}" "${udp_list[@]}"
-					test_pass="y"
+					test_pass="n"
 					break
 				else
 					printf '\Got an invalid port number %s - no changes were made\nEXIT\n' "$port"
@@ -139,7 +139,7 @@ maxRules()
 # Function to create the iptables rule
 addRules()
 {
-	if [[ $test_mode != "y" ]] ; then # extra check not to run in test_mode
+	if [[ $test_mode != y ]] ; then # extra check not to run in test_mode
 		# Set the dport param based on if single or multiport
 		local port_param
 		if [[ "${rules[r]}" == *","* ]] ; then
@@ -231,20 +231,25 @@ runScript() # in a function so it can be sourced
 		[[ $test_pass == n ]] && break
 
 
-		if [[ $test_mode == "y" ]] ; then
+		if [[ $test_mode == y ]] ; then
 
-			# crete assoc array to store vlaue if ranges are empty
+			# create assoc array to store value if ranges are empty
 			declare -A empty
 			for r in "${rules[@]}" ;	do
-				if [[ -n ${rules[*]} ]] ; then
+				if [[ -z ${rules[*]} ]] ; then
 					empty[$p]=1
 					continue
 				else
 					printf '%s: %s\n' "${p^^}" "$r"
 				fi
 			done
-			[[ $p == "tcp" ]] && printf 'Checking UDP ports...\n'
-			((empty[tcp]+empty[udp] == 2)) && test_pass="n"
+			if [[ $p == tcp ]] ; then
+				printf 'Checking UDP ports...\n'
+			else
+				if ((empty[tcp]+empty[udp] == 2)) ; then
+					test_pass="n"
+				fi
+			fi
 		else
 
 			total_rules=$((${#rules[@]} * ${#interface[@]})) # get total number of rules multiplied by the number of interfaces
@@ -255,7 +260,7 @@ runScript() # in a function so it can be sourced
 		fi
 	done
 
-	if [[ $test_mode != "y" ]] ; then
+	if [[ $test_mode != y ]] ; then
 		# Update persistant rules (excluding ClearOS)
 		if ! [[ -f /etc/clearos-release ]] ; then
 			if [[ $auto_save != y ]] ; then
