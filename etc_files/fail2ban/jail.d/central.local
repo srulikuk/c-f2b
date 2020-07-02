@@ -19,7 +19,7 @@ bantime = 2147483
 action = ipset-shared[name=shared,bantime=2147483]
 
 [portprobe]
-enabled = true
+enabled = False
 port = 0:65535
 logpath = /var/log/portprobe.log
 filter  = portprobe

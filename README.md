@@ -102,6 +102,11 @@ This jail works by adding a iptables rule to log all connections to close ports,
     *  if its only a single port or 1 range you have open the rule would be like this `iptables -A INPUT -i <iface_name> -m state --state NEW -p <protocol> --dport <port:range> -j LOG --log-prefix "Probe on closed port: " --log-level 4`
   *  You must update these rules each time you open / close a port on iptables and CRUCIALLY when you open a port, as connections to ANY port not listed in this rule will gen an instant ban.
   * use `netfilter-persistent save` to save after testing the rules
+  * There are 2 bash scripts in the bash_scripts dir which can be used to automate this "VERIFY by test run that the result is as expected on your system"
+    * You can use the iptables_wrapper to automatically run these scripts after adding removing a rules
+      * Add an alias in your .bashrc  `alias iptables='/root/c-f2b/bash_scripts/iptables_wrapper.sh'`
+        * This will execute the full iptables command you issue but will run the additional script if the firstargument to iptables is `-A` or `-D`
+        * This will ONLY run when executing iptables from the command-line, if executing from automated scripts and you need this consider using the wrapper in /sbin/iptables
 
 &nbsp;
 
