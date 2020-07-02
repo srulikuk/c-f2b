@@ -417,7 +417,7 @@ if [[ ${r[3]} =~ ^(y|yes)$ ]] ; then
 #    pf_name=$(date +%s) # partial name of tmp file
 
     # execute the script in test mode
-    test_mode="y"
+#    test_mode="y"
     source "$iptables_script" runScript
     if [[ $test_pass == n ]] ; then
       printf '
@@ -450,8 +450,8 @@ If the output was satisfactory do you want to add the iptables rule now? [y/n] >
       read -r run_iptables
 
       if [[ ${run_iptables,,} =~ ^(y|yes)$ ]] ; then
-        test_mode="n" # unset test_mode
-        "$iptables_script" runScript
+#        test_mode="n" # unset test_mode
+        "$iptables_script"
         updated="0"
         diffCheck "/etc/rsyslog.d/portprobe.conf" "${m_dir}/etc_files/rsyslog.d/portprobe.conf"
         systemctl restart rsyslog
