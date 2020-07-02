@@ -355,42 +355,43 @@ done
 # portprobe
 if [[ ${r[3]} =~ ^(y|yes)$ ]] ; then
   touch /var/log/portprobe.log # must have file for fail2ban
-  printf 'IMPORTANT NOTE:
+  printf 'IMPORTANT NOTES - READ CAREFULLY:
   The  portprobe  jail  works  by  logging attempts  to  all  ports  not
   specifically excluded in the logging rules, when opening a new port (or
   closing  a port)  you  MUST  update the  logging  rules  else all  IPs
   attempting to access that port will be banned on the first attempt.
 
-  You can add/update these portprobe logging  rules to iptables manually
+  You can add / update these iptables portprobe logging  rules  manually
   or you  can try the script  that tries to extract  the open ports from
   current iptables rules, this script will only work if you  have active
-  rules specifying these ports in iptables. (if the script test fails on
+  rules specifying open  ports in iptables. (if the script test fails on
   on this host you can try to amend the script to suit.)
 
-  The script has been tested on Debain and CentOS based systems  to some
-  degree (there is a seperate script which is for ClearOS based systems)
+  The script  has been tested  on Debain and  CentOS (inc ClearOS) based
+  systems  to some degree - but you  must do  your  own  checks / tests.
 
   NOTE: If you  do not have any open  ports or use a  method other  then
   iptables to manage your traffic, these scripts  will NOT work for you,
   you will need to find another way to create the  iptables rules to log
   portprobing.
-   - If  you use "exclude <port> ACCEPT"  or "include <port> REJECT, for
-   - example (!--dport 123 -j ACCEPT) or (--dport 123 -j REJECT)" in your
-   - iptables rules do NOT use this script!
+   - If your iptables rules include rules like;
+    - "exclude <port> ACCEPT"  or "include <port> REJECT, for example;
+     - "! --dport 123 -j ACCEPT" or "--dport 123 -j REJECT"
+   - do NOT use this script!
 
   Do you want to test these scripts now to see if they will work on this
   host? [y/n] > '
   read -r test_script
   if [[ ${test_script,,} =~ ^(y|yes)$ ]] ; then
     mkdir -p "${m_dir}/lc_iptables_${new_lc}/"
-    iptables_script="iptables.sh"
 #    if ! cp "${m_dir}/misc/${iptables_script}" "${m_dir}/lc_misc_${new_lc}/" ; then
-    if ! cp -r "${m_dir}/iptables" "${m_dir}/lc_iptables_${new_lc}" ; then
+    if ! cp -r "${m_dir}/iptables/"* "${m_dir}/lc_iptables_${new_lc}/" ; then
       exit_msg+=("There is an issue with your cloned dir, I give up")
       exit
     fi
     # Update path in iptables wrapper
     sed -i "s,/root/c-f2b/iptables/,${m_dir}/lc_iptables_${new_lc}/," "${m_dir}/lc_iptables_${new_lc}/wrapper.sh"
+    iptables_script="iptables.sh"
 
     # Get the wan interfaces
     getWan
