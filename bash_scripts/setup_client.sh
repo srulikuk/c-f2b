@@ -319,7 +319,7 @@ fi
 # Install required pip3 packages
 if [[ ${r[2]} =~ ^(y|yes)$ ]] ; then
   printf '\nInstalling pip3 packages...\n\n'
-  if ! pip3 install "${i_pip[@]}" ;then
+  if ! pip3 install --user "${i_pip[@]}" ;then
     exit_msg+=('There was an error installing the pip3 packages')
     exit
   fi
