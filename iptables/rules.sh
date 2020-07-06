@@ -272,7 +272,17 @@ USE CAUTION when saving iptables rules!  [y/n] > '
 			fi
 
 			if [[ ${net_save,,} =~ ^(y|yes)$ || $auto_save = y ]] ; then
-				netfilter-persistent save
+				if ! [[ -f /etc/debian_version ]] ; then
+					netfilter-persistent save
+				else
+			    for f in /etc/centos-release* ; do
+	      		if [[ -e $f ]] ; then
+							iptables-save > /etc/iptables/rules.v4
+							ip6tables-save > /etc/iptables/rules.v6
+							break
+						fi
+					done
+				fi
 				# Remove fail2ban ipset rules from saved rules (these are added by fail2ban)
 				query='^-A INPUT -m set --match-set f2b-.* src -j REJECT --reject-with icmp-port-unreachable'
 				for file in rules.v4 rules.v6 ; do

@@ -45,11 +45,15 @@ checkOS()
   if [[ -f /etc/debian_version ]]; then
     pkg_m="apt"
     py_dev="python3-dev"
+    net_p="netfilter-persistent"
+    net_i="iptables-persistent"
   elif ! [[ -f /etc/debian_version ]] ; then
     for f in /etc/centos-release* ; do
       if [[ -e $f ]] ; then
         pkg_m="yum"
         py_dev="python3-devel"
+        net_p=''
+        net_i=''
         break
       else
         exit_msg+=("This script has only been tested on Debain / CentOS based distro's\nFeel free to amend the script as to meet your requirements, refer to the README.")
@@ -57,11 +61,8 @@ checkOS()
       fi
     done
   fi
-  net_p="netfilter-persistent"
-  net_i="iptables-persistent"
   if [[ -f /etc/clearos-release ]] ; then
     clear_os="y"
-    net_p=''
   fi
 }
 
