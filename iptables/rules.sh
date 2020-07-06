@@ -244,7 +244,7 @@ runScript() # in a function so it can be sourced
 				fi
 			done
 			if [[ $p == tcp ]] ; then
-				printf 'Checking UDP ports...\n'
+				printf '\nChecking UDP ports...\n'
 			else
 				if ((empty[tcp]+empty[udp] == 2)) ; then
 					test_pass="n"

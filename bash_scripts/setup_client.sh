@@ -396,11 +396,11 @@ if [[ ${r[3]} =~ ^(y|yes)$ ]] ; then
     # Get the wan interfaces
     getWan
     printf '
-  The output of the test should show only the protocol and the port
-  numbers/range (the real output will print max 15 per line)
-  Example: - tcp ports: 80,443,500:510
-  Example: - udp ports: 1100,1291,20000:29000
-  \n# OUTPUT BELOW #\n\n'
+The output of the test should show only the protocol and the port
+numbers/range (the real output will print max 15 per line)
+Example: - TCP: 80,443,500:510
+Example: - UDP: 1100,1291,20000:29000
+\n# OUTPUT BELOW #\n\n'
 
     # First update the script with the interfaces
     iptables_script="${m_dir}/lc_iptables_${new_lc}/${iptables_script}"
@@ -422,16 +422,16 @@ if [[ ${r[3]} =~ ^(y|yes)$ ]] ; then
     if [[ $test_pass == n ]] ; then
       printf '
 The script did not return any ports in use, either
- - You are not using iptables to open ports, or
- - There are no open ports, or
- - The script does not work on this host
- You can either amend the script %s, or
- you can add  the iptables rule to log portprobing  manually, refer the
- to the README file.
- To use portprobe you will need to implement the iptables rules manually
- and enable the portprobe jail.\n
- Failed  to  configure  portprobe,  do you  want  to  continue  without
- portprobe or exit? [c=continue/e=exit] > '  "${c_dir}/iptables/iptables.sh"
+- You are not using iptables to open ports, or
+- There are no open ports, or
+- The script does not work on this host
+You can either amend the script %s, or
+you can add  the iptables rule to log portprobing  manually, refer the
+to the README file.
+To use portprobe you will need to implement the iptables rules manually
+and enable the portprobe jail.\n
+Failed  to  configure  portprobe,  do you  want  to  continue  without
+portprobe or exit? [c=continue/e=exit] > '  "${c_dir}/iptables/iptables.sh"
       read -r con_exit
 
       if ! [[ ${con_exit,,} =~ ^(c|continue|e|exit)$ ]] ; then
@@ -684,13 +684,13 @@ if [[ $install_cron == y ]] ; then
   # Add cronjob
   (crontab -l ; echo "* * * * * python3 ${m_dir}/py/readdb.py >> /var/log/cronRun.log 2>&1") 2>&1 | crontab
   printf '
-  [INFO:] Installed crontab, depending on how many records already
-  exist in the DB it can take up to several hours to finish adding
-  the IPs to fail2ban.\n'
+[INFO:] Installed crontab, depending on how many records already
+exist in the DB it can take up to several hours to finish adding
+the IPs to fail2ban.\n'
 fi
 printf '
-  [INFO:] To update your existing jails to use the shared action, for
-  example "action = ipset-jails[name=<jail_name>,bantime=2147483]"\n'
+[INFO:] To update your existing jails to use the shared action, for
+example "action = ipset-jails[name=<jail_name>,bantime=2147483]"\n'
 
 printf '[INFO:] Reloading fail2ban-client...'
 if ! fail2ban-client reload ; then
@@ -699,8 +699,8 @@ if ! fail2ban-client reload ; then
   # Add it commented
   (crontab -l ; echo "#* * * * * python3 ${m_dir}/py/readdb.py >> /var/log/cronRun.log 2>&1") 2>&1 | crontab
   printf '
-  [ERROR:] There was en error reloading fail2ban, cronjob was
-  disabled, restore from backup and removing crontab entry? [y/n]'
+[ERROR:] There was en error reloading fail2ban, cronjob was
+disabled, restore from backup and removing crontab entry? [y/n]'
   read -r restore_f
   if [[ ${restore_f,,} =~ ^(y|yes)$ ]] ;then
     if ! mv "$bkp_dir" /etc/fail2ban ; then
@@ -711,8 +711,8 @@ if ! fail2ban-client reload ; then
     printf '[INFO:] Reloading fail2ban-client...'
     if ! fail2ban-client reload ; then
       printf '
-  [ERROR:] There was en error reloading fail2ban,
-  there is a problem with your original config\n'
+[ERROR:] There was en error reloading fail2ban,
+there is a problem with your original config\n'
       exit_msg+=("[ERROR:] There is a problem with your /etc/fail2ban config")
       exit
     fi
