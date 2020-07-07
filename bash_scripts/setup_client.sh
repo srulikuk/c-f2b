@@ -463,7 +463,7 @@ If the output was satisfactory do you want to add the iptables rule now? [y/n] >
 To run the iptables script automatically after adding / removing a rule
 add the path to %s in
 /etc/clearos/firewall.d/90-attack-detector at the end of the file before "exit"
-NOTE: You will need to install "Attack Detector" from the market place first' "$iptables_script"
+NOTE: You will need to install "Attack Detector" from the market place first\n' "$iptables_script"
         else # not clearOS
           printf '
 You can make an alias or wrapper to execute the iptables rules each time
@@ -622,12 +622,12 @@ else
   if [[ -z $myport ]] ; then
     myport="3306"
   fi
-  printf '\Enter the username for the MySQL DB (enter for default f2ban) > '
+  printf '\nEnter the username for the MySQL DB (enter for default f2ban) > '
   read -r myuser
   if [[ -z $myuser ]] ; then
     myport="f2ban"
   fi
-  printf '\Enter the name of the MySQL DB (enter for default fail2ban) > '
+  printf '\nEnter the name of the MySQL DB (enter for default fail2ban) > '
   read -r mydb
   if [[ -z $mydb ]] ; then
     myport="fail2ban"
@@ -694,6 +694,14 @@ printf '
 example "action = ipset-jails[name=<jail_name>,bantime=2147483]"\n'
 
 printf '[INFO:] Reloading fail2ban-client...'
+if ! systemctl is-active -q fail2ban ; then
+  if ! systemctl is-enabled --quiet fail2ban ; then
+    printf '\nEnabling fail2ban service...\n'
+    systemctl enable fail2ban
+  fi
+  printf '\nStarting fail2ban service...\n'
+  systemctl start fail2ban
+fi
 if ! fail2ban-client reload ; then
   # First remove cronjob
   crontab -l | grep -v 'python3 .*/py/readdb.py' | crontab

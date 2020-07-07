@@ -209,10 +209,12 @@ runScript() # in a function so it can be sourced
 
 	# sort the ports and ranges (check for duplicates) and add to iptables
 	for p in tcp udp ; do
-		if [[ $p == tcp ]] ; then
-			printf '\nChecking TCP ports...\n'
-		else
-			printf '\nChecking UDP ports...\n'
+		if [[ $test_mode == y ]] ; then
+			if [[ $p == tcp ]] ; then
+				printf '\nChecking TCP ports...\n'
+			else
+				printf '\nChecking UDP ports...\n'
+			fi
 		fi
 		[[ $test_pass == n ]] && break
 		if [[ $p = tcp ]] ; then
