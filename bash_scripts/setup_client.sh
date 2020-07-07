@@ -690,7 +690,7 @@ exist in the DB it can take up to several hours to finish adding
 the IPs to fail2ban.\n'
 fi
 printf '
-[INFO:] To update your existing jails to use the shared action, for
+[INFO:] you can ppdate your existing jails to use the shared action,
 example "action = ipset-jails[name=<jail_name>,bantime=2147483]"\n'
 
 printf '[INFO:] Reloading fail2ban-client...'
