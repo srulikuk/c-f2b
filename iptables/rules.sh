@@ -175,10 +175,10 @@ runScript() # in a function so it can be sourced
 	forwd=$(printf 'FORWARD -i %s\\|' "${interface[@]}")
 
 	# Get TCP ports to array
-	mapfile -t tcp_list < <(iptables-save | grep -v "Probe on closed port: " | sed -n "/INPUT\|PREROUTING\|${forwd::-2}/s/.*-p tcp.*--dports\{0,1\} \([^ ]*\) -.*/\1/p" | tr ',' '\n' |sort -n | uniq)
+	mapfile -t tcp_list < <(iptables-save | grep -Ev 'Probe on closed port: |RELATED|ESTABLISHED' | sed -n "/INPUT\|PREROUTING\|${forwd::-2}/s/.*-p tcp.*--dports\{0,1\} \([^ ]*\) -.*/\1/p" | tr ',' '\n' |sort -n | uniq)
 
 	# Get UDP ports to array
-	mapfile -t udp_list < <(iptables-save | grep -v "Probe on closed port: " | sed -n "/INPUT\|PREROUTING\|${forwd::-2}/s/.*-p udp.*--dports\{0,1\} \([^ ]*\) -.*/\1/p" | tr ',' '\n' |sort -n | uniq)
+	mapfile -t udp_list < <(iptables-save | grep -Ev 'Probe on closed port: |RELATED|ESTABLISHED' | sed -n "/INPUT\|PREROUTING\|${forwd::-2}/s/.*-p udp.*--dports\{0,1\} \([^ ]*\) -.*/\1/p" | tr ',' '\n' |sort -n | uniq)
 
 	# # If test MODE just export port the array/list
 	# # to file and exit (used in the setup script)
@@ -235,6 +235,7 @@ runScript() # in a function so it can be sourced
 
 			# create assoc array to store value if ranges are empty
 			declare -A empty
+			printf '\nChecking TCP ports...\n'
 			for r in "${rules[@]}" ;	do
 				if [[ -z ${rules[*]} ]] ; then
 					empty[$p]=1
