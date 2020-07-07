@@ -209,6 +209,11 @@ runScript() # in a function so it can be sourced
 
 	# sort the ports and ranges (check for duplicates) and add to iptables
 	for p in tcp udp ; do
+		if [[ $p == tcp ]] ; then
+			printf '\nChecking TCP ports...\n'
+		else
+			printf '\nChecking UDP ports...\n'
+		fi
 		[[ $test_pass == n ]] && break
 		if [[ $p = tcp ]] ; then
 			range_=("${tcp_list[@]}")
@@ -235,7 +240,6 @@ runScript() # in a function so it can be sourced
 
 			# create assoc array to store value if ranges are empty
 			declare -A empty
-			printf '\nChecking TCP ports...\n'
 			for r in "${rules[@]}" ;	do
 				if [[ -z ${rules[*]} ]] ; then
 					empty[$p]=1
@@ -244,9 +248,7 @@ runScript() # in a function so it can be sourced
 					printf '%s: %s\n' "${p^^}" "$r"
 				fi
 			done
-			if [[ $p == tcp ]] ; then
-				printf '\nChecking UDP ports...\n'
-			else
+			if [[ $p == udp ]] ; then
 				if ((empty[tcp]+empty[udp] == 2)) ; then
 					test_pass="n"
 				fi
