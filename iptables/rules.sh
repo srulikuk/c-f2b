@@ -111,7 +111,6 @@ checkPorts()
 # Function to split the ports/ranges into set of 15
 maxRules()
 {
-#	echo "${list[@]}"
 	rule_num=1 # Rule number for iptables rule comment (incremented later)
 	local count=0 # port number added to array (incremented as added)
 	local ports=''
@@ -179,20 +178,6 @@ runScript() # in a function so it can be sourced
 
 	# Get UDP ports to array
 	mapfile -t udp_list < <(iptables-save | grep -Ev 'Probe on closed port: |RELATED|ESTABLISHED' | sed -n "/INPUT\|PREROUTING\|${forwd::-2}/s/.*-p udp.*--dports\{0,1\} \([^ ]*\) -.*/\1/p" | tr ',' '\n' |sort -n | uniq)
-
-	# # If test MODE just export port the array/list
-	# # to file and exit (used in the setup script)
-	# if [[ $test_mode == y ]] ; then
-	# 	if [[ -n ${tcp_list[*]} ]] ; then
-	# 		port_list=$(printf '%s,' "${tcp_list[@]}")
-	# 		printf '%s\n' "${port_list%,}" > "/tmp/tcp_ports_$2"
-	# 	fi
-	# 	if [[ -n ${udp_list[*]} ]] ; then
-	# 		port_list=$(printf '%s,' "${udp_list[@]}")
-	# 		printf '%s\n' "${port_list%,}" > "/tmp/udp_ports_$2"
-	# 	fi
-	# 	exit 0
-	# fi
 
 	# Delete existing portprobe rules
 	if ! [[ $test_mode == y ]] ; then

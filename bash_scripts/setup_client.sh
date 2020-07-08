@@ -461,9 +461,7 @@ If the output was satisfactory do you want to add the iptables rule now? [y/n] >
         if [[ ${clear_os} == y ]] ; then # if clearOS print the following
           printf '
 To run the iptables script automatically after adding / removing a rule
-add the path to %s in
-/etc/clearos/firewall.d/90-attack-detector at the end of the file before "exit"
-NOTE: You will need to install "Attack Detector" from the market place first\n' "$iptables_script"
+add the path to %s in /etc/clearos/firewall.d/local\n' "$iptables_script"
         else # not clearOS
           printf '
 You can make an alias or wrapper to execute the iptables rules each time
