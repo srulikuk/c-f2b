@@ -30,11 +30,11 @@ delRules()
 	# should be removed, also to avoid duplicate rules
 	# Get number of portprobe rules from iptables
 	if [[ $test_mode != y ]] ; then # extra check not to run in test_mode
-		del_rules=$(iptables -L INPUT --line-numbers | grep -c "Probe on closed port:")
+		del_rules=$(iptables -L INPUT --line-numbers | grep -c "PortProbe Rule:")
 		# Each time a rule gets deleted the rule numbers changes for the
 		# rest so delete 1 by 1 and get the next rule number after delete.
 		for ((i=1; i<=del_rules; i++)) ; do
-			rule=$(iptables -L INPUT --line-numbers | awk '/Probe on closed port:/{print $1}' | tail -n1)
+			rule=$(iptables -L INPUT --line-numbers | awk '/PortProbe Rule:/{print $1}' | tail -n1)
 			iptables -D INPUT "$rule"
 		done
 	fi
@@ -122,7 +122,7 @@ maxRules()
 		[[ $port = *:* ]] && local add=2 # If its a range treat as 2 ports
 		local count=$((count + add))
 		if ((count <= 15)) ; then
-			local ports+="${port}," # add the prot with a comma to ports var
+			local ports+="${port}," # add the port with a comma to ports var
 		else # reached the 15 max
 			local ports="${ports%,}" # remove last comma from var
 			rules+=("$ports") # add the 15 ports as a element in the array
@@ -160,7 +160,7 @@ addRules()
 			fi
 
 			iptables -A INPUT -i "$iface" -m state --state NEW -p "$p" "${port_param[@]}" "${rules[r]}" -j \
-			LOG --log-prefix "Probe on closed port: " --log-level 4 -m comment --comment \
+			LOG --log-prefix "PortProbe Rule: " --log-level 4 -m comment --comment \
 			"${p^^} ${s_iface}RULE # $((rule_num++)) of $total_rules port-probing logging"
 		done
 	fi
@@ -174,10 +174,10 @@ runScript() # in a function so it can be sourced
 	forwd=$(printf 'FORWARD -i %s\\|' "${interface[@]}")
 
 	# Get TCP ports to array
-	mapfile -t tcp_list < <(iptables-save | grep -Ev 'Probe on closed port: |RELATED|ESTABLISHED' | sed -n "/INPUT\|PREROUTING\|${forwd::-2}/s/.*-p tcp.*--dports\{0,1\} \([^ ]*\) -.*/\1/p" | tr ',' '\n' |sort -n | uniq)
+	mapfile -t tcp_list < <(iptables-save | grep -Ev 'PortProbe Rule: |RELATED|ESTABLISHED' | sed -n "/INPUT\|PREROUTING\|${forwd::-2}/s/.*-p tcp.*--dports\{0,1\} \([^ ]*\) -.*/\1/p" | tr ',' '\n' |sort -n | uniq)
 
 	# Get UDP ports to array
-	mapfile -t udp_list < <(iptables-save | grep -Ev 'Probe on closed port: |RELATED|ESTABLISHED' | sed -n "/INPUT\|PREROUTING\|${forwd::-2}/s/.*-p udp.*--dports\{0,1\} \([^ ]*\) -.*/\1/p" | tr ',' '\n' |sort -n | uniq)
+	mapfile -t udp_list < <(iptables-save | grep -Ev 'PortProbe Rule: |RELATED|ESTABLISHED' | sed -n "/INPUT\|PREROUTING\|${forwd::-2}/s/.*-p udp.*--dports\{0,1\} \([^ ]*\) -.*/\1/p" | tr ',' '\n' |sort -n | uniq)
 
 	# Delete existing portprobe rules
 	if ! [[ $test_mode == y ]] ; then
