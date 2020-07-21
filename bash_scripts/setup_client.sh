@@ -696,16 +696,18 @@ if ! systemctl is-active -q fail2ban ; then
   if ! systemctl is-enabled --quiet fail2ban ; then
     printf '\nEnabling fail2ban service...\n'
     systemctl enable fail2ban
+    wait
   fi
   printf '\nStarting fail2ban service...\n'
   systemctl start fail2ban
+  wait
 fi
 if ! fail2ban-client status 2> /dev/null ; then
   f2b_job="start"
 else
   f2b_job="reload"
 fi
-if ! fail2ban-client "$f2b_job" 2> /dev/null ; then
+if ! fail2ban-client "$f2b_job" ; then
   # First remove cronjob
   crontab -l | grep -v 'python3 .*/py/readdb.py' | crontab
   # Add it commented
@@ -726,6 +728,9 @@ disabled, restore from backup and removing crontab entry? [y/n]'
 [ERROR:] There was en error reloading fail2ban,
 there is a problem with your original config\n'
       exit_msg+=("[ERROR:] There is a problem with your /etc/fail2ban config")
+      exit
+    else
+      exit_msg+=("[ERROR:] Restore was successful but c-f2b setup was not successful")
       exit
     fi
   fi
