@@ -1,7 +1,24 @@
 #!/bin/bash
+# Insert wan interfaces (this is normally inserted by the setup script)
+#interface+=("")
 
-interface+=("ens3")
-interface+=("ens9")
+# Script to get list of open ports from iptables
+
+# IMPORTANT: This will NOT work for all machines as the
+# output of iptables is not formatted exactly the same.
+
+# This script is also used to test without actually making
+# any chnages to iptables "test_mode=y" for this mode  the
+# var "test_pass=n" is in use.  When sourcing this  script
+# ensure you first set test_mode="y"
+
+# This script ONLY works when using iptables to specify ports
+# If you use "exclude <port> ACCEPT" (! --dport 123 -j ACCEPT) or
+# "include <port> REJECT (--dport 123 -j REJECT)" do NOT use this
+# script!
+# Its important to run this as soon as a new port is opened else
+# the connecting ip will get banned by fail2ban as soon as it tries
+# to connect to the port.
 
 auto_save="n" # change to "y" if "netfilter-persistent save" should
 # be executed on each run without prompting. USE EXTREME CAUTION

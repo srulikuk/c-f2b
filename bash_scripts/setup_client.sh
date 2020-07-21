@@ -700,7 +700,12 @@ if ! systemctl is-active -q fail2ban ; then
   printf '\nStarting fail2ban service...\n'
   systemctl start fail2ban
 fi
-if ! fail2ban-client reload ; then
+if ! fail2ban-client status 2> /dev/null ; then
+  f2b_job="start"
+else
+  f2b_job="reload"
+fi
+if ! fail2ban-client "$f2b_job" 2> /dev/null ; then
   # First remove cronjob
   crontab -l | grep -v 'python3 .*/py/readdb.py' | crontab
   # Add it commented
