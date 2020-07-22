@@ -155,7 +155,7 @@ createCron() {
   chown "root:$1" "$cron_tab"
   chmod 600 "$cron_tab"
 }
-
+shopt -q extglob || shopt -s extglob # turn on extglob
 exit_success=1
 trap cleanup EXIT
 checkRoot
