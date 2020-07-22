@@ -276,8 +276,8 @@ done
 # Create the dir with custom configs (lc_ prefix is in gitignore)
 # Check if lc_ dir exists, if yes get last version
 
-tmp=(""$m_dir"/lc_*_[0-9]*")
-last_lc="${tmp[-1]}"
+tmp=("$m_dir"/lc_*_{,[0-9],[0-9][0-9],[0-9][0-9][0-9]})
+last_lc="${tmp[-1]##*_}"
 #last_lc=$(find "${m_dir}/" -maxdepth 1 -type d -iname "lc_*_[[:digit:]]" \
 #-print0 | sed -z 's/.*_//' | sort -zn | tail -z -n 1 | tr -d \\0)
 
