@@ -639,7 +639,8 @@ if ! systemctl is-active -q fail2ban ; then
   systemctl start fail2ban
   wait
 fi
-if ! fail2ban-client status 2> /dev/null ; then
+sleep 2 # wait for the service to start
+if ! fail2ban-client status > /dev/null 2>&1 ; then
   f2b_job="start"
 else
   f2b_job="reload"
