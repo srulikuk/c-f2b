@@ -156,12 +156,13 @@ createCron() {
   chmod 600 "$cron_tab"
 }
 shopt -q extglob || shopt -s extglob # turn on extglob
+
 exit_success=1
 trap cleanup EXIT
 checkRoot
 checkOS
 shopt -q extglob || shopt -s extglob # turn on extglob
-
+shopt -q nullglob || shopt -s nullglob # turn on nullglob
 # Set some vars
 
 # Dir of scripts
@@ -276,15 +277,16 @@ done
 # Create the dir with custom configs (lc_ prefix is in gitignore)
 # Check if lc_ dir exists, if yes get last version
 
-tmp=("$m_dir"/lc_*_{,[0-9],[0-9][0-9],[0-9][0-9][0-9]})
-last_lc="${tmp[-1]##*_}"
+tmp=("$m_dir"/lc_{fail2ban,iptables}_{,[0-9][0-9],[0-9][0-9][0-9]}[0-9]})
+last_lc=$(printf '%s\n' "${tmp[@]##*_}" | sort -un | tail -n 1)
 #last_lc=$(find "${m_dir}/" -maxdepth 1 -type d -iname "lc_*_[[:digit:]]" \
 #-print0 | sed -z 's/.*_//' | sort -zn | tail -z -n 1 | tr -d \\0)
 
 # Set the new version
-new_lc=$((last_lc + 1))
 if [[ -z $last_lc ]] ; then
   new_lc="1"
+else
+  new_lc=$((last_lc + 1))
 fi
 if ! rsync -a "${m_dir}/etc_files/fail2ban/" "${m_dir}/lc_fail2ban_${new_lc}/" ; then
   exit_msg+=("There is an issue with your cloned dir, I give up")
