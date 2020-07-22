@@ -275,8 +275,12 @@ done
 
 # Create the dir with custom configs (lc_ prefix is in gitignore)
 # Check if lc_ dir exists, if yes get last version
-last_lc=$(find "${m_dir}/" -maxdepth 1 -type d -iname "lc_*_[[:digit:]]" \
--print0 | sed -z 's/.*_//' | sort -zn | tail -z -n 1 | tr -d \\0)
+
+tmp=(""$m_dir"/lc_*_[0-9]*")
+last_lc="${tmp[-1]}"
+#last_lc=$(find "${m_dir}/" -maxdepth 1 -type d -iname "lc_*_[[:digit:]]" \
+#-print0 | sed -z 's/.*_//' | sort -zn | tail -z -n 1 | tr -d \\0)
+
 # Set the new version
 new_lc=$((last_lc + 1))
 if [[ -z $last_lc ]] ; then
@@ -481,75 +485,6 @@ you add or remove a rule from iptables, the wrapper is at %s\n' "${m_dir}/iptabl
     fi # run iptables script not in test mode
   fi # test iptables script
 fi # portprobe = y
-
-  #   # If there is no data in the test utput files test failed
-  #   if ! [[ -s /tmp/tcp_ports_$pf_name || -s /tmp/udp_ports_$pf_name ]] ; then
-  #     broke=1
-  #     test_error="
-  # The script did not return any ports in use, either
-  #  - You are not using iptables to open ports, or
-  #  - There are no open ports, or
-  #  - The script does not work on this host
-  #  You can either amend the script ${iptables_script}, or
-  #  you can add  the iptables rule to log portprobing  manually, refer the
-  #  to the README file.
-  #  To use portprobe you will need to implement the iptables rules manually
-  #  and enable the portprobe jail"
-  #     printf '%b\n' "$test_error"
-  #
-  #   else
-  #     # if there is output test the output
-  #     broke=0
-  #     for p in tcp udp  ; do
-  #       if [[ $broke = 1 ]] ; then
-  #         # If the output is wrong for 1 the script is unsafe
-  #         break
-  #       fi
-  #       if [[ -s /tmp/${p}_ports_$pf_name ]] ; then
-  #         # Create an array of all ports to test each element individually
-  #         mapfile -t port_list < <(awk -F':|,' '{for (i = 1; i <= NF; i++){print $i}}' < "/tmp/${p}_ports_$pf_name")
-  #
-  #         # test if the array starts and end with digits, else test failed
-  #         if ! [[ ${port_list[*]} =~ ^([0-9].*[0-9])$ ]] ; then
-  #           printf '\nThe script failed, expected a valid port list but got:\n - [ERROR:]: %s: %s\n' "$p" "$(<"/tmp/${p}_ports_$pf_name")"
-  #           printf '%b\n' "$test_error"
-  #           broke=1
-  #             break
-  #         else
-  #           for port in "${port_list[@]}" ; do
-  #             # test if each element is a valid port number,
-  #             # i.e 1-5 digits highest 65535, else test failed
-  #             if ! [[ $port =~ ^([0-9]{1,5})$ ]] || ((port > 65535)) ; then
-  #               printf 'Expected a valid port number/range but got \n %b'  "$port"
-  #               printf '%b\n' "$test_error"
-  #               broke=1
-  #               break
-  #             fi
-  #           done
-  #         fi
-  #       fi
-  #     done
-  #
-  #     # If tests are successful ask user to check output and confirm
-  #     if [[ $broke = 0 ]] ; then
-  #       for m in tcp udp ; do
-  #         if [[ -s /tmp/${m}_ports_$pf_name ]] ; then
-  #           printf ' - %s ports: %s\n' "$m" "$(<"/tmp/${m}_ports_$pf_name")"
-  #         fi
-  #       done
-
-  #         fi
-#       fi
-#     fi
-#   else # user selected not to run portprobe test
-#     printf '\nSkipping protprobe setup \nYou can setup prortprobe manually\nRefer to the README for details'
-#   fi
-#   if [[ $broke = 1 ]] ; then
-#     printf ''
-#   elif [[ $broke = 0 ]] ; then
-#     # Update fail2ban action files
-#   fi
-# fi
 
 # NAT forwarding
 if [[ ${r[4]} =~ ^(y|yes)$ ]] ; then
