@@ -156,13 +156,12 @@ createCron() {
   chmod 600 "$cron_tab"
 }
 shopt -q extglob || shopt -s extglob # turn on extglob
+shopt -q nullglob || shopt -s nullglob # turn on nullglob
 
 exit_success=1
 trap cleanup EXIT
 checkRoot
 checkOS
-shopt -q extglob || shopt -s extglob # turn on extglob
-shopt -q nullglob || shopt -s nullglob # turn on nullglob
 # Set some vars
 
 # Dir of scripts
@@ -170,6 +169,7 @@ c_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 m_dir="${c_dir%/*}"
 
 # Required package list
+#yum list available | grep '^python3[0-9]\.x'
 r_pkgs=("fail2ban" "ipset" "python3" "$py_dev" "python3-pip" "$net_p" "$net_i")
 f2b_v="0.10.2"
 r_pip=("mysql-connector-python" "tendo")

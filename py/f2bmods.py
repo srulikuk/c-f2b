@@ -69,6 +69,7 @@ def parg():
 
 # ncol - New Column (add System UUID to host_table + New column for this in ip_table)
 def ncol(cursor, db, my_host_name):
+    import sys
     suuid()
     import mysql.connector
     querycol = """
