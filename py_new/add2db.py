@@ -2,7 +2,6 @@ import os
 import sys
 import socket
 import datetime
-import subprocess
 import mysql.connector
 from mysql.connector import errorcode
 import lc_myconn as my_conn
@@ -40,8 +39,10 @@ def main():
     cursor.execute(querywht)
 
     if cursor.fetchone()[0] != 0:
-        f2bcmd = ("fail2ban-client unban " + parg.ip)
-        subprocess.run(f2bcmd, shell=True)
+        from fail2ban.client.csocket import CSocket
+        s = CSocket("/run/fail2ban/fail2ban.sock")
+        s.send(["unban", parg.ip])
+        s.close()
         sys.exit(0)
 
     # Update DB with new IP and params
