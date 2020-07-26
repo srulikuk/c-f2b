@@ -127,30 +127,21 @@ def main():
     cursor.execute(queryrem)
     result = cursor.fetchall()
     if result:
-        # from fail2ban.client.csocket import CSocket
-        # s = CSocket("/run/fail2ban/fail2ban.sock")
-        # jails = s.send(["status"])[1][1][1]
-        # jails = jails.split(", ")
-        f2bcmd = ("fail2ban-client status")
-        jails = subprocess.check_output(f2bcmd, shell=True)
-        jails = jails.decode('utf8').split('\t')
-        jails = jails[2].split(', ')
-        jails = ' '.join(jails).split()
+        from fail2ban.client.csocket import CSocket
+        s = CSocket("/run/fail2ban/fail2ban.sock")
+        jails = s.send(["status"])[1][1][1]
+        jails = jails.split(", ")
         for row in result:
             row_id = (row[0])
             rem_ip = (row[1])
             rem_type = (row[2])
             row
             # Run the unban command
-            # s.send(["unban", rem_ip])
-            f2bcmd = ("fail2ban-client unban " + rem_ip)
-            subprocess.run(f2bcmd, shell=True)
+            s.send(["unban", rem_ip])
             if rem_type == 1:
                 # If type is permenant unban add IP to ignore list
                 for jname in jails:
-                    # s.send(['set', jname, 'addignoreip', rem_ip])
-                    f2bcmd = ("fail2ban-client set " + jname + " addignoreip " + rem_ip)
-                    subprocess.run(f2bcmd, shell=True)
+                    s.send(['set', jname, 'addignoreip', rem_ip])
                 with open("/etc/fail2ban/jail.d/whitelist.local", "r+") as whitelist:
                     if rem_ip not in whitelist.read():
                         whitelist.write(' {}\n'.format(rem_ip,))

@@ -613,21 +613,15 @@ fi
 diffCheck "/etc/logrotate.d/" "${m_dir}/etc_files/logrotate.d/custom-f2b-logs"
 touch /var/log/cronRun.log
 
-# Install crontab
-if [[ $install_cron == y ]] ; then
-  # Remove old cronjobs for this first
-  crontab -l | grep -v 'python3 .*/py/readdb.py' | crontab
-  # Add cronjob
-  (crontab -l ; echo "* * * * * python3 ${m_dir}/py/readdb.py >> /var/log/cronRun.log 2>&1") 2>&1 | crontab
-  printf '
-[INFO:] Installed crontab, depending on how many records already
-exist in the DB it can take up to several hours to finish adding
-the IPs to fail2ban.\n'
-fi
 printf '
-[INFO:] you can ppdate your existing jails to use the shared action,
+[INFO:] you can update your existing jails to use the shared action,
 example "action = ipset-jails[name=<jail_name>,bantime=2147483]"\n'
 
+printf '\nChecking if %s/lc_custom exists for custom commands before reload\n' "$m_dir"
+if [[ -e ${m_dir}/lc_custom ]] ; then
+  ${m_dir}/lc_custom
+  printf 'Exec %s/lc_custom complete \n' "$m_dir"
+fi
 printf '[INFO:] Reloading fail2ban-client...'
 if ! systemctl is-active -q fail2ban ; then
   if ! systemctl is-enabled --quiet fail2ban ; then
@@ -645,6 +639,19 @@ if ! fail2ban-client status > /dev/null 2>&1 ; then
 else
   f2b_job="reload"
 fi
+
+# Install crontab
+if [[ $install_cron == y ]] ; then
+  # Remove old cronjobs for this first
+  crontab -l | grep -v 'python3 .*/py/readdb.py' | crontab
+  # Add cronjob
+  (crontab -l ; echo "* * * * * python3 ${m_dir}/py/readdb.py >> /var/log/cronRun.log 2>&1") 2>&1 | crontab
+  printf '
+  [INFO:] Installed crontab, depending on how many records already
+  exist in the DB it can take up to several hours to finish adding
+  the IPs to fail2ban.\n'
+fi
+
 if ! fail2ban-client "$f2b_job" ; then
   # First remove cronjob
   crontab -l | grep -v 'python3 .*/py/readdb.py' | crontab

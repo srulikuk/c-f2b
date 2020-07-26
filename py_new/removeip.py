@@ -24,19 +24,18 @@ db = mysql.connector.connect(
 def main():
     suuid()
     parg()
-    f2bcmd = ("fail2ban-client unban " + parg.ip)
-    subprocess.run(f2bcmd, shell=True)    # If type is permenant unban add IP to ignore list
+    # Open a socket to fail2ban
+    s = CSocket("/run/fail2ban/fail2ban.sock")
+    s.send(["unban", parg.ip])
+    # If type is permenant unban add IP to ignore list
     if parg.type == 1:
         # Add to f2b live ignoreip (f2b wont read whitelist file until reload)
         # Get a list of jails to execute ignoreip on
-        f2bcmd = ("fail2ban-client status")
-        jails = subprocess.check_output(f2bcmd, shell=True)
-        jails = jails.decode('utf8').split('\t')
-        jails = jails[2].split(', ')
-        jails = ' '.join(jails).split()
-            for jname in jails:
-                f2bcmd = ("fail2ban-client set " + jname + " addignoreip " + rem_ip)
-                subprocess.run(f2bcmd, shell=True)
+        jails = s.send(["status"])[1][1][1]
+        jails = jails.split(", ")
+        for jname in jails:
+            s.send(['set', jname, 'addignoreip', rem_ip])
+    s.close()
 
     # Update the db that we have processed for this host
     db.ping(reconnect=True, attempts=3, delay=150)
