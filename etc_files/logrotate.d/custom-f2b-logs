@@ -1,6 +1,7 @@
 /var/log/cronRun.log
 /var/log/portprobe.log
 /var/log/shared.log {
+    su syslog adm
     missingok
     notifempty
     maxsize 5M

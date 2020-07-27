@@ -362,6 +362,7 @@ done
 # portprobe
 if [[ ${r[3]} =~ ^(y|yes)$ ]] ; then
   touch /var/log/portprobe.log # must have file for fail2ban
+  chown syslog:adm /var/log/portprobe.log
   printf 'IMPORTANT NOTES - READ CAREFULLY:
   The  portprobe  jail  works  by  logging attempts  to  all  ports  not
   specifically excluded in the logging rules, when opening a new port (or
@@ -607,6 +608,7 @@ else
     printf '[INFO:] No files were upadted in /etc/fail2ban\n'
   fi
   touch /var/log/shared.log # must have file for fail2ban
+  chown syslog:adm /var/log/shared.log
 fi
 
 # Add logrotate files
