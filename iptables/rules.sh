@@ -2,7 +2,7 @@
 # Insert wan interfaces (this is normally inserted by the setup script)
 #interface+=("")
 
-# Script to get list of open ports from iptables
+# Script to get list of open ports from iptables and create logging rules
 
 # IMPORTANT: This will NOT work for all machines as the
 # output of iptables is not formatted exactly the same.
@@ -20,6 +20,18 @@
 # the connecting ip will get banned by fail2ban as soon as it tries
 # to connect to the port.
 
+# Semi safe ports - closed ports that are legitimatly attempted by
+# mistake, such as for mail servers when setting up a mail client
+# and trying the wrong ports (i.e 465 instead of 587).
+# When creating these rules it will check if a rule for these ports
+# exits, if a rule exists it will skip this. These ports will have
+# a seperate log prefix and will be used in a less strict jail (4
+# attempts per hour).
+
+# Safe ports (this is normally inserted by the setup script)
+#safe_tcp+=("")
+#safe_udp+=("")
+
 auto_save="n" # change to "y" if "netfilter-persistent save" should
 # be executed on each run without prompting. USE EXTREME CAUTION
 
@@ -30,11 +42,11 @@ delRules()
 	# should be removed, also to avoid duplicate rules
 	# Get number of portprobe rules from iptables
 	if [[ $test_mode != y ]] ; then # extra check not to run in test_mode
-		del_rules=$(iptables -L INPUT --line-numbers | grep -c "PortProbe Rule:")
+		del_rules=$(iptables -nL INPUT --line-numbers | grep -Eic "PortProbe Rule:|PortProbe sf Rule:|safe port reject rule")
 		# Each time a rule gets deleted the rule numbers changes for the
 		# rest so delete 1 by 1 and get the next rule number after delete.
 		for ((i=1; i<=del_rules; i++)) ; do
-			rule=$(iptables -L INPUT --line-numbers | awk '/PortProbe Rule:/{print $1}' | tail -n1)
+			rule=$(iptables -nL INPUT --line-numbers | awk '/PortProbe Rule:|PortProbe sf Rule:|safe port reject rule/{print $1}' | tail -n1)
 			iptables -D INPUT "$rule"
 		done
 	fi
@@ -124,8 +136,40 @@ checkPorts()
 		done
 	done
 
-	local ports=("${!ports[@]}") # turn the array index into array elements
+	# check if safe_ports are in main ports.
+	if [[ $test_mode != 'y' ]] ; then
+		[[ $p = 'tcp' ]] && safe_ports=("${safe_tcp[@]}")
+		[[ $p = 'udp' ]] && safe_ports=("${safe_udp[@]}")
+		if [[ -n ${safe_ports[*]} ]] ; then
+			for n in "${safe_ports[@]}"; do
+				local s_s=${n%%:*} # (if range) get start of range
+				local s_e=${n#*:} # (if range) get end of range
+				local s_port
 
+				for ((s_port=s_s; s_port<=s_e; s_port++)) ; do
+					# test if its a valid port number
+					if ! [[ $s_port =~ ^([0-9]{1,5})$ ]] || ((s_port > 65535)) ; then
+						printf '\Invalid port number %s in safe_ports - no changes were made\nEXIT\n' "$s_port"
+						exit
+					fi
+					# add each port to array index
+					if [[ -v ports[$s_port] ]] ; then
+						continue
+					else
+						local safe_p[s_port]=
+						ports[s_port]=
+					fi
+				done
+			done
+		fi
+	fi
+	safe_ports=("${!safe_p[@]}") # turn the array index into array elements
+	local ports=("${!ports[@]}") # turn the array index into array elements
+	portList
+}
+
+portList()
+{
 	local range=0
 	ranges=()
 	local start=${ports[0]}
@@ -218,14 +262,14 @@ addRules()
 		if [[ "$r" == *","* ]] ; then
 			dst_opt[0]='-m'
 			dst_opt[1]='multiport'
-			if [[ -z $src_ip && -z $src_prt ]] ; then
-				dst_opt[2]='!'
-				dst_opt[3]='--dports'
+			if [[ -z $src_ip && -z $src_prt && $pr_text = "PortProbe Rule: " ]] ; then
+					dst_opt[2]='!'
+					dst_opt[3]='--dports'
 			else
 				dst_opt[2]='--dports'
 			fi
 		else
-			if [[ -z $src_ip && -z $src_prt ]] ; then
+			if [[ -z $src_ip && -z $src_prt && $pr_text = "PortProbe Rule: " ]] ; then
 				dst_opt[0]='!'
 				dst_opt[1]='--dport'
 			else
@@ -243,9 +287,15 @@ addRules()
 				local s_iface="($iface) "
 			fi
 
-			 iptables -A INPUT -i "$iface" -m state --state NEW -p "${params[@]}" -j \
-			 LOG --log-prefix "PortProbe Rule: " --log-level 4 -m comment --comment \
-			 "PortProbe Rule: ${p^^} ${s_iface}RULE # $((rule_num++)) of $total_rules"
+			# reject rule for safe ports
+			if [[ $sfrules == 'y' ]] ; then
+				iptables $ia INPUT -i "$iface" -m state --state NEW -p "${params[@]}" -j \
+				REJECT -m comment --comment "safe port reject rule"
+			fi
+
+			 iptables $ia INPUT -i "$iface" -m state --state NEW -p "${params[@]}" -j \
+			 LOG --log-prefix "$pr_text" --log-level 4 -m comment --comment \
+			 "${p^^} ${s_iface}RULE # $((rule_num++)) of $total_rules"
 # 			echo "iptables -A INPUT -i $iface -m state --state NEW -p ${params[@]} -j \
 # LOG --log-prefix 'PortProbe Rule: ' \
 # portprobe rule: ${p^^} ${s_iface}RULE # $((rule_num++)) of $total_rules"
@@ -266,7 +316,7 @@ runScript()
 	r_0='^-A|-I' # start match
 	r_1='INPUT|FORWARD|PREROUTING' # chain name
 	r_2='-i |-p |-s |--src-range' # rule params
-	grep_v="PortProbe Rule: |RELATED|ESTABLISHED"
+	grep_v="PortProbe Rule: |PortProbe sf Rule: |RELATED|ESTABLISHED|safe port reject rule"
 	tmp_iface=$(printf -- '-i %s|' "${interface[@]}")
 
 	# Check if the interfaces include a '+' if yes set for only 1 interface
@@ -295,10 +345,10 @@ runScript()
 		maxRules
 		[[ $test_pass == n ]] && break
 
-		if [[ -n ${rules[@]} && -n ${opt_rule[@]} ]] ; then
+		if [[ -n ${rules[*]} && -n ${opt_rule[*]} ]] ; then
 			rules=("${rules[@]}" "${opt_rule[@]}")
 		fi
-		if [[ -n ${opt_rule[@]} && -z ${rules[@]} ]] ; then
+		if [[ -n ${opt_rule[*]} && -z ${rules[*]} ]] ; then
 			rules=("${opt_rule[@]}")
 		fi
 
@@ -321,11 +371,28 @@ runScript()
 				fi
 			fi
 		else
+			pr_text="PortProbe Rule: "
 			total_rules=$((${#rules[@]} * ${#interface[@]})) # get total number of rules multiplied by the number of interfaces
+			ia='-A'
 			for r in "${rules[@]}" ;	do
 				addRules
 			done
-
+			# safe port rules
+			if [[ -n ${safe_ports[*]} ]] ; then
+				ports=("${safe_ports[@]}")
+				portList
+				list=("${ranges[@]}")
+				maxRules
+				pr_text="PortProbe sf Rule: "
+				total_rules=$((${#rules[@]} * ${#interface[@]})) # get total number of rules multiplied by the number of interfaces
+				ia='-I'
+				sfrules='y'
+				for r in "${rules[@]}" ;	do
+					addRules
+				done
+				safe_ports=()
+				sfrules=''
+			fi
 		fi
 	done
 

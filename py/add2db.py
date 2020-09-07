@@ -23,26 +23,26 @@ db = mysql.connector.connect(
 def main():
     suuid()
     parg()
-    db.ping(reconnect=True, attempts=3, delay=150)
-    cursor = db.cursor()
-    cursor.autocommit = False
-    # Before adding to DB make sure this IP has not been permenantly whitelisted - if yes undo ban action and exit
-    # The only real way fail2ban could have banned a whitelisted ip is if it was whitelisted in the last 60 seconds
-    # Hence its not yet in the local fail2ban ignore list or readdb.py isnt running as expected every 60 seconds.
-    querywht = """
-    SELECT COUNT(*)
-    FROM ip_table
-    WHERE ip = '{}'
-    AND whitelist = '1'
-    """.format(
-        parg.ip
-    )
-    cursor.execute(querywht)
-
-    if cursor.fetchone()[0] != 0:
-        f2bcmd = ("fail2ban-client unban " + parg.ip)
-        subprocess.run(f2bcmd, shell=True)
-        sys.exit(0)
+    # db.ping(reconnect=True, attempts=3, delay=150)
+    # cursor = db.cursor()
+    # cursor.autocommit = False
+    # # Before adding to DB make sure this IP has not been permenantly safelisted - if yes undo ban action and exit
+    # # The only real way fail2ban could have banned a safelisted ip is if it was safelisted in the last 60 seconds
+    # # Hence its not yet in the local fail2ban ignore list or readdb.py isnt running as expected every 60 seconds.
+    # querywht = """
+    # SELECT COUNT(*)
+    # FROM wht_table
+    # WHERE ip LIKE '{}%'
+    # AND type = '1'
+    # """.format(
+    #     parg.ip
+    # )
+    # cursor.execute(querywht)
+    #
+    # if cursor.fetchone()[0] != 0:
+    #     f2bcmd = ("fail2ban-client unban " + parg.ip)
+    #     subprocess.run(f2bcmd, shell=True)
+    #     sys.exit(0)
 
     # Update DB with new IP and params
     # Using a loop in case this host does not yet exist in DB in which case the except will add it
@@ -52,7 +52,7 @@ def main():
             # If fail2ban passed the destination IP use this query, else use the next one
             if parg.d_ip:
                 addtodb = """
-                INSERT INTO ip_table (
+                INSERT INTO ban_list (
                     added_by,jailname,protocol,port,ip,dst_ip,{}
                 )
                 VALUES (
@@ -65,7 +65,7 @@ def main():
 
             else:
                 addtodb = """
-                INSERT INTO ip_table (
+                INSERT INTO ban_list (
                     added_by,jailname,protocol,port,ip,{}
                 )
                 VALUES (

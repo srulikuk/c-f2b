@@ -40,41 +40,83 @@ def parg():
         )
     else:
         # If called by removeip create the follwoing instead
-        arg_msg="Example - 'python3 /root/removeip.py -i 192.168.1.1 -t 1'. \nFor -t type arg use 1 for permenant whitelist, 2 for remove ban only"
-        parser.add_argument(
-            '-i', type=ipaddress.ip_address, action="store", dest="ip", required=True, help=arg_msg
+        arggroup = parser.add_mutually_exclusive_group(required=True)
+#        arg_msg="Example - 'python3 /root/removeip.py -i 192.168.1.1 -t 1'. \nFor -t type arg use 1 for permenant safelist, 2 for remove ban only\nFor a CIDR range use -r insted of -i (-r 192.168.1.1/24)\nFor a start/end range use -s & -e (-s 192.168.1.1 -e 192.168.1.100)"
+        arggroup.add_argument(
+            '-i', type=ipaddress.ip_address, action="append", dest="ip", help="REQUIRED if - proccesing single ip's (example usage: -i 192.168.1.1 -t 1) for multiple add -i for each "
+        )
+        arggroup.add_argument(
+            '-r', action="append", dest="ip_cidr", help="REQUIRED if - proccesing ip range's (example usage: -r 192.168.1.1/24 -t 1) for multiple add -r for each"
+        )
+        arggroup.add_argument(
+            '-s', type=ipaddress.ip_address, action="store", dest="ip_start", help="REQUIRED if - proccesing ip range using start and end ip (-s = start ip, example usage: see -e below)"
         )
         parser.add_argument(
-            '-t', type=int, action="store", dest="remove_type", required=True
+            '-e', type=ipaddress.ip_address, action="store", dest="ip_end", required='-s' in sys.argv, help="REQUIRED if - proccesing ip range using start and end ip (-e = end ip, example usage: -s 192.168.1.1 -e 192.168.2.100 -t 1)"
         )
+        parser.add_argument(
+            '-t', type=int, action="store", dest="remove_type", required=True, choices=(1,2), help="REQUIRED - removal type, use 1 for permenant safelist, 2 for remove ban current ban only"
+        )
+        # check if the following args were provided more then once.
+        args_count = ['-s', '-e', '-t']
+        for a in args_count:
+            if sys.argv.count(a) > 1:
+                print('ERROR: Only one instance of "' + a + '" allowed')
+                sys.exit(1)
 
     args = parser.parse_args()
-
-    parg.ip = str(args.ip)
-
     # If not called by removeip create the following vars
     if "removeip.py" not in sys.argv[0]:
+        parg.ip = str(args.ip)
         parg.jn = args.jailname
         parg.prt = args.protocol
         parg.port = args.port
         parg.d_ip = args.dest_ip
     else:
-        # If called by removeip create the follwoing instead
+        # If called by removeip create the following instead
+        if args.ip:
+            parg.ip = args.ip
+            parg.range = False
+        # else:
+        #     parg.ip = None
+        if args.ip_cidr:
+#            parg.ip_r = str(args.ip_cidr)
+            for i in args.ip_cidr:
+                if '/' not in i:
+                    print(i + ' is not a valid CIDR range')
+                    sys.exit(1)
+                try:
+                    ipaddress.IPv4Network(i, strict=True)
+                except ipaddress.AddressValueError:
+                    print(i + ' is not a valid ip address')
+                    sys.exit(1)
+                except ipaddress.NetmaskValueError:
+                    print(i + ' is not a valid mask')
+                    sys.exit(1)
+        # else:
+#            parg.ip_r = None
+            parg.ip = args.ip_cidr
+            parg.range = True
+        if args.ip_end:
+            if not args.ip_start:
+                print('arg -e (end ip) must be provided with -s (start ip) arg')
+                sys.exit(1)
+            else:
+                parg.ip = [ipaddr for ipaddr in ipaddress.summarize_address_range(args.ip_start, args.ip_end)]
+                parg.range = True
+#                parg.ip_r = parg.ip_r
         parg.type = args.remove_type
-        if parg.type not in (1,2):
-            print("FAILED: "+ arg_msg)
-            sys.exit(1)
-    # End of removeip.py requirements
+        # End of removeip.py requirements
 
 
-# ncol - New Column (add System UUID to host_table + New column for this in ip_table)
+# ncol - New Column (add System UUID to host_list + New column for this in ban_list)
 def ncol(cursor, db, my_host_name):
     import sys
     suuid()
     import mysql.connector
     querycol = """
     SELECT COUNT(*)
-    FROM host_table
+    FROM ban_list
     WHERE host_uuid = '{}'
     """.format(
         suuid.uuid
@@ -85,7 +127,7 @@ def ncol(cursor, db, my_host_name):
     if (exists[0][0]) == 0:
         try:
             addhost = """
-            INSERT INTO host_table (
+            INSERT INTO ban_list (
                 host_name,host_uuid,host_id
             )
             VALUES ('{}','{}','{}')
@@ -100,24 +142,24 @@ def ncol(cursor, db, my_host_name):
             sys.exit(1)
 
     try:
-        # Add column in ip_table for this host
+        # Add column in ban_list for this host
         addcol = """
-        ALTER TABLE ip_table
+        ALTER TABLE ban_list
         ADD COLUMN {0}
         SMALLINT
         NOT NULL
         DEFAULT 0,
-        ADD INDEX ({0},whitelist,created),
-        ADD INDEX (whitelist,{0}),
+        ADD INDEX ({0},safe_status,created),
+        ADD INDEX (safe_status,{0}),
         ADD INDEX ({0},created)
         """.format(
             suuid.col_id
         )
         cursor.execute(addcol)
 
-        # Set old records in ip_table to '5' for this host
+        # Set old records in ban_list to '5' for this host
         setold = """
-        UPDATE ip_table
+        UPDATE ban_list
         SET {} = '5'
         WHERE DATE_SUB(CURDATE(),INTERVAL 25 DAY) >= created
         """.format(
@@ -130,4 +172,22 @@ def ncol(cursor, db, my_host_name):
         print("Something went wrong: {}".format(err))
         # If the columnn does not exist and we cannot add it exit
         db.rollback()
+        sys.exit(1)
+
+    # add column in safe_list table
+    try:
+        addcol = """
+        ALTER TABLE safe_list
+        ADD COLUMN {}
+        SMALLINT
+        NOT NULL
+        DEFAULT 0,
+        ADD INDEX ({},status)
+        """.format(
+            suuid.col_id
+        )
+        cursor.execute(addcol)
+        db.commit()
+    except mysql.connector.Error as err:
+        print("Something went wrong: {}".format(err))
         sys.exit(1)

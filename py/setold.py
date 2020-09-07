@@ -34,14 +34,14 @@ def main():
     cursor.autocommit = false
     getcol = """
     SELECT host_id
-    FROM host_table
+    FROM ban_list
     """
     cursor.execute(getcol)
     result = cursor.fetchall()
     for row in result:
         col = (row[0])
         update = """
-        UPDATE ip_table
+        UPDATE ban_list
         SET {0} = '5'
         WHERE {0} = '0'
         AND DATE_SUB(CURDATE(),INTERVAL 25 DAY) >= created

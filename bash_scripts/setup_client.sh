@@ -3,23 +3,27 @@
 # Setup central fail2ban on client host
 # This does NOT setup the DB
 
+# Required package list
+# r_pkgs=("ipset" "python3" "$py_dev" "python3-pip" "$net_p" "$net_i")
+# f2b_v="0.10.2"
+r_pip=("mysql-connector-python" "tendo")
+my_sql_v="8"
+
 cleanup()
 {
   if ((exit_success == 1)) ; then
     # If new config directories were created delete them
-    if [[ -n $new_lc ]] ; then
-      for d in fail2ban iptables ; do
-        if [[ -d ${m_dir}/lc_${d}_${new_lc} ]] ; then
-          if [[ -z $delete_me ]] ; then
-            printf '\nScript exiting with error, delete config files created in this run? [y/n] > '
-            read -r delete_me
-          fi
-          if [[ ${delete_me,,} =~ ^(y|yes)$ ]] ; then
-            rm -r "${m_dir}/lc_${d}_${new_lc}"
-          fi
+#    if [[ -n $new_lc ]] ; then
+    for d in fail2ban iptables ; do
+      if [[ -d "${m_dir}/lc_${d}.tmp" ]] ; then
+        if [[ -z $delete_me ]] ; then
+          printf '\nScript exiting with error, delete config files created in this run? [y/n] > '
+          read -r delete_me
         fi
-      done
-    fi
+        [[ ${delete_me,,} =~ ^(y|yes)$ ]] && rm -r "${m_dir}/lc_${d}.tmp"
+      fi
+    done
+#    fi
 
     # Print the error messages
     for m in "${exit_msg[@]}" ; do
@@ -42,38 +46,43 @@ checkRoot()
 # Check the current host
 checkOS()
 {
+  distro=""
   if [[ -f /etc/debian_version ]]; then
-    pkg_m="apt"
-    py_dev="python3-dev"
-    net_p="netfilter-persistent"
-    net_i="iptables-persistent"
-  elif ! [[ -f /etc/debian_version ]] ; then
+#    pkg_m="apt"
+#    py_dev="python3-dev"
+#    net_p="netfilter-persistent"
+#    net_i="iptables-persistent"
+#  elif ! [[ -f /etc/debian_version ]] ; then
+    distro="debain"
+  else
     for f in /etc/centos-release* ; do
       if [[ -e $f ]] ; then
-        pkg_m="yum"
-        py_dev="python3-devel"
-        net_p=''
-        net_i=''
+        # pkg_m="yum"
+        # py_dev="python3-devel"
+        # net_p=''
+        # net_i=''
+        distro="centos"
+        if [[ -f /etc/clearos-release ]] ; then
+          distro="clearos"
+        fi
         break
       else
-        exit_msg+=("This script has only been tested on Debain / CentOS based distro's\nFeel free to amend the script as to meet your requirements, refer to the README.")
-        exit
+#        exit_msg+=("This script has only been tested on Debain / CentOS based distro's\nFeel free to amend the script as to meet your requirements, refer to the README.")
+#        exit
+        distro="other"
       fi
     done
   fi
-  if [[ -f /etc/clearos-release ]] ; then
-    clear_os="y"
-  fi
 }
 
-# Debain based package query
-apt_v() {
-  dpkg-query --showformat='${Version}' --show "$1" 2>/dev/null
-}
-# CentOS based package query
-yum_v() {
-  rpm -q --qf "%{VERSION}\n" "$1" | grep -v "not installed"
-}
+# # Debain based package query
+# apt_v() {
+#   dpkg-query --showformat='${Version}' --show "$1" 2>/dev/null
+# }
+# # CentOS based package query
+# yum_v() {
+#   rpm -q --qf "%{VERSION}\n" "$1" | grep -v "not installed"
+# }
 
 # Get wan interfaces
 getWan()
@@ -164,23 +173,36 @@ checkRoot
 checkOS
 # Set some vars
 
+# Check if fail2ban / ipset / pyhton3 are installed
+fail=0
+if ! fail2ban-client -V >/dev/null 2>&1 ; then
+  exit_msg+=("[ERROR:] Fail2ban does not seem to be installed")
+  fail=1
+else
+  if ! ipset -V >/dev/null 2>&1 ; then
+    exit_msg+=("[ERROR:] ipset must be installed first")
+    fail=1
+  fi
+fi
+if ! python3 -V >/dev/null 2>&1 ; then
+  exit_msg+=("[ERROR:] python3 must be installed first")
+  fail=1
+fi
+if ! python3-pip -V >/dev/null 2>&1 ; then
+  exit_msg+=("[ERROR:] python3-pip must be installed first")
+  fail=1
+fi
+((fail == 1)) && exit
+
 # Dir of scripts
 c_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 m_dir="${c_dir%/*}"
-
-# Required package list
-#yum list available | grep '^python3[0-9]\.x'
-r_pkgs=("fail2ban" "ipset" "python3" "$py_dev" "python3-pip" "$net_p" "$net_i")
-f2b_v="0.10.2"
-r_pip=("mysql-connector-python" "tendo")
-my_sql_v="8"
-
 
 
 # Get some info out the way
 printf '
 #  Setup central fail2ban on clients  #
-You MUST read and understand the README.md file before continuing!
+You MUST read and understand the script & README.md file before continuing!
 
 This  will NOT  setup / configure the mysql DB  it will only setup /
 configre  the client side.  Check all  the scripts to make sure they
@@ -190,29 +212,32 @@ fit  your requirements and will work in your use case / system.
 read -n1 -r -p 'Press any key to continue or CTRL+C to exit
 '
 
-# Check which packages are installed ; else add to array
-printf 'Checking installed packages...\n'
-declare -A v_pkg
-for p in "${r_pkgs[@]}" ; do
-  if ! v=$(${pkg_m}_v "$p") ; then
-    i_pkgs+=("$p")
-  else
-    v_pkg[$p]="$v"
+# # Check which packages are installed ; else add to array
+# printf 'Checking installed packages...\n'
+# declare -A v_pkg
+# for p in "${r_pkgs[@]}" ; do
+#   if ! v=$(${pkg_m}_v "$p") ; then
+#     i_pkgs+=("$p")
+#   else
+#     v_pkg[$p]="$v"
+#   fi
+# done
+
+# Check which pip packages are installed ; else add to array
+#declare -A v_pip
+#if ! [[ ${i_pkgs[*]} =~ "python3-pip" ]] ; then
+for p in "${r_pip[@]}" ; do
+  if ! v=$(pip3 show "$p") ; then
+    i_pip+=("$p")
+    if [[ $p = 'mysql-connector-python' ]] ; then
+      sql_v="$v"
+    fi
   fi
 done
 
-# Check which pip packages are installed ; else add to array
-declare -A v_pip
-if ! [[ ${i_pkgs[*]} =~ "python3-pip" ]] ; then
-  for p in "${r_pip[@]}" ; do
-    if ! v=$(pip3 show "$p") ; then
-      i_pip+=("$p")
-      v_pip[$p]="$v"
-    fi
-  done
-else
-  i_pip=("${r_pip[*]}")
-fi
+# else
+#   i_pip=("${r_pip[*]}")
+# fi
 
 # Ask some questions to get set the vars and commands
 # q = main question text, qr = text response to q, qe = valid responses
@@ -222,43 +247,48 @@ q[0]="Will $m_dir remain the dir for\nthe c-f2b scripts? [y/n] > "
 qr[0]='Place the c-f2b dir in the path you intend it to remain and try again'
 qe[0]='(y|yes|n|no)'
 
-# install pacakges
-q[1]="
-The following packages need to be installed;
-- ${i_pkgs[*]}
-Install these packages [y/n] > "
-qr[1]='These packages need to be installed to continue'
-qe[1]='(y|yes|n|no)'
+# # install pacakges
+# q[1]="
+# The following packages need to be installed;
+# - ${i_pkgs[*]}
+# Install these packages [y/n] > "
+# qr[1]='These packages need to be installed to continue'
+# qe[1]='(y|yes|n|no)'
+
 
 # install pip3 packages
-q[2]="
+q[1]="
 The following python pip3 packages will be installed;
 - ${i_pip[*]}
 Install these packages [y/n] > "
-qr[2]='These pip3 packages need to be installed to continue'
-qe[2]='(y|yes|n|no)'
+qr[1]='These pip3 packages need to be installed to continue'
+qe[1]='(y|yes|n|no)'
 
 # Use portprobe jail
-q[3]='\nWill you be using the portprobe jail? [y/n] > '
-qe[3]='(y|yes|n|no)'
+q[2]='\nWill you be using the portprobe jail? [y/n] > '
+qe[2]='(y|yes|n|no)'
 
 # Nat forwarding
-q[4]='Does this host do NAT forwarding? [y/n] > '
-qe[4]='(y|yes|n|no)'
+q[3]='Does this host do NAT forwarding? [y/n] > '
+qe[3]='(y|yes|n|no)'
 
 # Install crontab
-q[5]='\nInstall root crontab to read the DB every minute? [y/n] > '
-qe[5]='(y|yes|n|no)'
+q[4]='\nInstall root crontab to read the DB every minute? [y/n] > '
+qe[4]='(y|yes|n|no)'
 
 
 # Get responses to all setup questions
 for z in "${!q[@]}" ; do
-  # If all packages are installed skip install question
-  if [[ $z = 1 && -z ${i_pkgs[*]} ]] ; then
-    continue
-  elif [[ $z = 2 && -z ${i_pip[*]} ]] ; then
+  # # If all packages are installed skip install question
+  # if [[ $z = 1 && -z ${i_pkgs[*]} ]] ; then
+  #   continue
+  # elif [[ $z = 2 && -z ${i_pip[*]} ]] ; then
+  #   continue
+  # fi
+  if [[ $z = 1 && -z ${i_pip[*]} ]] ; then
     continue
   fi
+
   printf '%b' "${q[$z]}"
   read -r answer
   if ! [[ ${answer,,} =~ ^${qe[$z]}$ ]] ; then
@@ -269,62 +299,63 @@ for z in "${!q[@]}" ; do
       exit_msg+=("${qr[$z]}")
       exit
     fi
-  else
-    r[$z]="${answer,,}"
   fi
+  r[$z]="${answer,,}"
 done
 
 # Create the dir with custom configs (lc_ prefix is in gitignore)
 # Check if lc_ dir exists, if yes get last version
 
-tmp=("$m_dir"/lc_{fail2ban,iptables}_{,[0-9][0-9],[0-9][0-9][0-9]}[0-9]})
-last_lc=$(printf '%s\n' "${tmp[@]##*_}" | sort -un | tail -n 1)
-#last_lc=$(find "${m_dir}/" -maxdepth 1 -type d -iname "lc_*_[[:digit:]]" \
-#-print0 | sed -z 's/.*_//' | sort -zn | tail -z -n 1 | tr -d \\0)
+# #tmp=("$m_dir"/lc_{fail2ban,iptables}_{,[0-9][0-9],[0-9][0-9][0-9]}[0-9]})
+# #last_lc=$(printf '%s\n' "${tmp[@]##*_}" | sort -un | tail -n 1)
+# #last_lc=$(find "${m_dir}/" -maxdepth 1 -type d -iname "lc_*_[[:digit:]]" \
+# #-print0 | sed -z 's/.*_//' | sort -zn | tail -z -n 1 | tr -d \\0)
+#
+# # Set the new version
+# if [[ -z $last_lc ]] ; then
+#   new_lc="1"
+# else
+#   new_lc=$((last_lc + 1))
+# fi
 
-# Set the new version
-if [[ -z $last_lc ]] ; then
-  new_lc="1"
-else
-  new_lc=$((last_lc + 1))
-fi
-if ! rsync -a "${m_dir}/etc_files/fail2ban/" "${m_dir}/lc_fail2ban_${new_lc}/" ; then
+if ! rsync -a "${m_dir}/etc_files/fail2ban/" "${m_dir}/lc_fail2ban.tmp/" ; then
   exit_msg+=("There is an issue with your cloned dir, I give up")
   exit
 else
   # Set the path to py files in fail2ban configs
   if ! [[ $m_dir == /root/c-f2b ]] ; then
-    sed -i "s,/root/c-f2b/py,${m_dir}/py," "${m_dir}/lc_fail2ban_${new_lc}/action.d/"*
+    sed -i "s,/root/c-f2b/py,${m_dir}/py," "${m_dir}/lc_fail2ban.tmp/action.d/"*
   fi
 fi
 
-# Install required packages
-if [[ ${r[1]} =~ ^(y|yes)$ ]] ; then
-  printf '\nInstalling packages...\n\n'
-  if ! $pkg_m install -y "${i_pkgs[@]}" ; then
-    exit_msg+=('There was an error installing the packages')
-    exit
-  fi
-fi
+# # Install required packages
+# if [[ ${r[1]} =~ ^(y|yes)$ ]] ; then
+#   printf '\nInstalling packages...\n\n'
+#   if ! $pkg_m install -y "${i_pkgs[@]}" ; then
+#     exit_msg+=('There was an error installing the packages')
+#     exit
+#   fi
+# fi
 
-# Check if fail2ban is minimum version
-if [[ -z ${v_pkg[fail2ban]} ]] ; then
-  v_pkg[fail2ban]="$(${pkg_m}_v "fail2ban")"
-fi
-if [[ $pkg_m = apt ]] ; then
-  if dpkg --compare-versions "$f2b_v" gt "${v_pkg[fail2ban]}"; then
-    exit_msg+=("Fail2Ban version > $f2b_v is required, installed version = ${v_pkg[fail2ban]}")
-    exit
-  fi
-else
-  if ! [ "$(printf '%s\n' "${v_pkg[fail2ban]//[!0-9.]/}" "$f2b_v" | sort -V | head -n1)" = "$f2b_v" ] ; then
-    exit_msg+=("Fail2Ban version > $f2b_v is required, installed version = ${v_pkg[fail2ban]}")
-    exit
-  fi
-fi
+# # Check if fail2ban is minimum version
+# if [[ -z ${v_pkg[fail2ban]} ]] ; then
+#   v_pkg[fail2ban]="$(${pkg_m}_v "fail2ban")"
+# fi
+# if [[ $pkg_m = apt ]] ; then
+#   if dpkg --compare-versions "$f2b_v" gt "${v_pkg[fail2ban]}"; then
+#     exit_msg+=("Fail2Ban version > $f2b_v is required, installed version = ${v_pkg[fail2ban]}")
+#     exit
+#   fi
+# else
+#   if ! [ "$(printf '%s\n' "${v_pkg[fail2ban]//[!0-9.]/}" "$f2b_v" | sort -V | head -n1)" = "$f2b_v" ] ; then
+#     exit_msg+=("Fail2Ban version > $f2b_v is required, installed version = ${v_pkg[fail2ban]}")
+#     exit
+#   fi
+# fi
 
 # Install required pip3 packages
-if [[ ${r[2]} =~ ^(y|yes)$ ]] ; then
+#if [[ ${r[1]} =~ ^(y|yes)$ ]] ; then
+if [[ -n ${i_pip[*]} ]] ; then
   printf '\nInstalling pip3 packages...\n\n'
   if ! pip3 install --user "${i_pip[@]}" ;then
     exit_msg+=('There was an error installing the pip3 packages')
@@ -333,13 +364,13 @@ if [[ ${r[2]} =~ ^(y|yes)$ ]] ; then
 fi
 # Make sure pip3 version of mysql-connector-python is > 8 (regardless if user opted to install)
 printf '\nVeryfying pip3 mysql-connector version...\n\n'
-if [[ -z ${v_pip[mysql-connector-python]} ]] ; then
-  v_pip[mysql-connector-python]="$(pip3 show "mysql-connector-python")"
+if [[ -z $sql_v ]] ; then
+  sql_v="$(pip3 show "mysql-connector-python")"
 fi
 for i in {1..2} ; do
-  if [[ $(awk '/^Version:/{print int($2)}' <<< "${v_pip[mysql-connector-python]}") < $my_sql_v ]] ; then
+  if [[ $(awk '/^Version:/{print int($2)}' <<< "$sql_v") < $my_sql_v ]] ; then
     # If user opted not to install pip pacakges ask if to update mysql-connector
-    if [[ $i = 1 && ! ${i_pip[*]} =~ "mysql-connector-python" ]] ; then
+    if ((i==1)) ; then # && ! ${i_pip[*]} =~ "mysql-connector-python" ]] ; then
       printf '
  The installed pip3 version of mysql-connector-python is old and
  will not work with these python scripts, attempt upgrade [y/n] > '
@@ -360,7 +391,7 @@ for i in {1..2} ; do
 done
 
 # portprobe
-if [[ ${r[3]} =~ ^(y|yes)$ ]] ; then
+if [[ ${r[2]} =~ ^(y|yes)$ ]] ; then
   touch /var/log/portprobe.log # must have file for fail2ban
   chown syslog:adm /var/log/portprobe.log
   printf 'IMPORTANT NOTES - READ CAREFULLY:
@@ -391,15 +422,15 @@ if [[ ${r[3]} =~ ^(y|yes)$ ]] ; then
   host? [y/n] > '
   read -r test_script
   if [[ ${test_script,,} =~ ^(y|yes)$ ]] ; then
-    mkdir -p "${m_dir}/lc_iptables_${new_lc}/"
+    mkdir -p "${m_dir}/lc_iptables.tmp"
 #    if ! cp "${m_dir}/misc/${iptables_script}" "${m_dir}/lc_misc_${new_lc}/" ; then
-    if ! cp -r "${m_dir}/iptables/"* "${m_dir}/lc_iptables_${new_lc}/" ; then
+    if ! cp -r "${m_dir}/iptables/"* "${m_dir}/lc_iptables.tmp/" ; then
       exit_msg+=("There is an issue with your cloned dir, I give up")
       exit
     fi
     # Update path in iptables wrapper
-    sed -i "s,/root/c-f2b/iptables/,${m_dir}/lc_iptables_${new_lc}/," "${m_dir}/lc_iptables_${new_lc}/wrapper.sh"
-    iptables_script="rules.sh"
+    sed -i "s,/root/c-f2b/iptables/,${m_dir}/lc_iptables/," "${m_dir}/lc_iptables.tmp/wrapper.sh"
+#    iptables_script="rules.sh"
 
     # Get the wan interfaces
     getWan
@@ -410,14 +441,20 @@ Example: - TCP: 80,443,500:510
 Example: - UDP: 1100,1291,20000:29000
 \n# OUTPUT BELOW #\n\n'
 
-    # First update the script with the interfaces
-    iptables_script="${m_dir}/lc_iptables_${new_lc}/${iptables_script}"
+    # update the script with the interfaces
+    iptables_script="${m_dir}/lc_iptables.tmp/rules.sh"
+#    iptables_script_final="${m_dir}/lc_iptables/rules.sh"
     if [[ -n ${iface_list[*]} ]] ; then
       i_list=("${iface_list[@]}")
     else
       i_list=("${iface_name[@]}")
     fi
-    line=3
+#    line=3
+    line="$(awk '/^#interface\+=\("")$/ {print FNR}' "$iptables_script")"
+    if [[ -n $line ]] ; then
+      exit_msg+=("Could not find expected line '#interface+=(\"\")' in $iptables_script file")
+      exit
+    fi
     for i in "${i_list[@]}" ; do
       sed -i "${line}iinterface+=(\"$i\")" "$iptables_script"
       ((line++))
@@ -439,7 +476,7 @@ to the README file.
 To use portprobe you will need to implement the iptables rules manually
 and enable the portprobe jail.\n
 Failed  to  configure  portprobe,  do you  want  to  continue  without
-portprobe or exit? [c=continue/e=exit] > '  "${c_dir}/iptables/iptables.sh"
+portprobe or exit? [c=continue/e=exit] > '  "${c_dir}/lc_iptables/iptables.sh"
       read -r con_exit
 
       if ! [[ ${con_exit,,} =~ ^(c|continue|e|exit)$ ]] ; then
@@ -456,7 +493,33 @@ example provided  this will NOT  work on this  host, you will  need to
 amend the script and test.\n
 If the output was satisfactory do you want to add the iptables rule now? [y/n] > '
       read -r run_iptables
-
+      printf '
+Semi  Safe  Ports - closed  ports that are  legitimatly  attempted by
+mistake, such as for mail servers  when setting up a mail client  and
+and trying the  wrong ports (i.e 465 instead of 587)  or UDP for SIP.
+When rules will not be creted for these ports if a rule for this port
+already  exists  in  iptables. These  ports will have a  seperate log
+prefix and will be used in a less strict jail (6 attempts per hour).
+Do you want to add some Semi Safe Ports? [y/n] > '
+      read -r semi_port
+      if [[ ${semi_port,,} =~ ^(y|yes)$ ]] ; then
+        for i in TCP UDP ; do
+          printf '\nEnter the %s ports / ranges, (space seperated)\ni.e 80 443 110:120 (leave emtpy if no %s ports)> ' "$i" "$i"
+          read -ra ss_port
+          if [[ -n ${ss_port[*]} ]] ; then
+            line="$(awk -v z= z="^#safe_${i,,}\\\+=\\\(\"\")" '$0 ~ z {print FNR}' "$iptables_script")"
+            if [[ -n $line ]] ; then
+              exit_msg+=("Could not find expected line '#safe_${i,,}+=(\"\")' in $iptables_script file")
+              exit
+            fi
+            for n in "${ss_port[@]}" ; do
+              sed -i "${line}isafe_${i,,}+=(\"$n\")" "$iptables_script"
+              ((line++))
+            done
+            ss_port=()
+          fi
+        done
+      fi
       if [[ ${run_iptables,,} =~ ^(y|yes)$ ]] ; then
 #        test_mode="n" # unset test_mode
         "$iptables_script"
@@ -465,24 +528,24 @@ If the output was satisfactory do you want to add the iptables rule now? [y/n] >
         systemctl restart rsyslog
 
         # message about autoamting the script
-        if [[ ${clear_os} == y ]] ; then # if clearOS print the following
+        if [[ $distro == clearos ]] ; then # if clearOS print the following
           printf '
 To run the iptables script automatically after adding / removing a rule
 add the path to %s in /etc/clearos/firewall.d/local\n' "$iptables_script"
         else # not clearOS
           printf '
 You can make an alias or wrapper to execute the iptables rules each time
-you add or remove a rule from iptables, the wrapper is at %s\n' "${m_dir}/iptables/wrapper.sh"
+you add or remove a rule from iptables, the wrapper is at %s\n' "${m_dir}/lc_iptables/wrapper.sh"
         fi
 
         # update the config files
         if ((${#iface_name[@]} > 1)) || [[ ${iface_name[*]} =~ '+'$ ]] ; then
           # If there more then 1 wan interface setfail2ban to pass the probed ip to py scripts
-          sed -i '/.*add2db.py -j <name> -pr <F-PROTO> -p <F-PORT> -i <ip> -d <F-DST>$/s/^#//' "${m_dir}/lc_fail2ban_${new_lc}/action.d/ipset-portprobe.local"
-          sed -i '/.*add2db.py -j <name> -pr <F-PROTO> -p <F-PORT> -i <ip>$/s/^/#/' "${m_dir}/lc_fail2ban_${new_lc}/action.d/ipset-portprobe.local"
+          sed -i '/.*add2db.py -j <name> -pr <F-PROTO> -p <F-PORT> -i <ip> -d <F-DST>$/s/^#//' "${m_dir}/lc_fail2ban.tmp/action.d/ipset-portprobe.local"
+          sed -i '/.*add2db.py -j <name> -pr <F-PROTO> -p <F-PORT> -i <ip>$/s/^/#/' "${m_dir}/lc_fail2ban.tmp/action.d/ipset-portprobe.local"
         fi
         # Enable the portprobe jail
-        sed -i '/[portprobe]/{n;s/False/true/}' "${m_dir}/lc_fail2ban_${new_lc}/jail.d/central.local"
+        sed -i '/[portprobe]/{n;s/False/true/}' "${m_dir}/lc_fail2ban.tmp/jail.d/central.local"
       fi
 
     fi # run iptables script not in test mode
@@ -495,7 +558,7 @@ if [[ ${r[4]} =~ ^(y|yes)$ ]] ; then
     getWan
   fi
   # Add the wan interfaces to fail2ban actions files
-  for file in "${m_dir}/lc_fail2ban_${new_lc}/action.d/"* ; do
+  for file in "${m_dir}/lc_fail2ban.tmp/action.d/"* ; do
     line_num_start=$(awk '/^#start#.*<iptables> -I FORWARD/{print NR + 1}' "$file" )
     line_num_stop=$(awk '/^#stop#.*<iptables> -D FORWARD/{print NR + 2}' "$file")
     for iface in "${iface_name[@]}" ; do
@@ -507,48 +570,9 @@ if [[ ${r[4]} =~ ^(y|yes)$ ]] ; then
   done
 fi
 
-# Cronjob
-if [[ ${r[5]} =~ ^(y|yes)$ ]] ; then
-  # Find the crontab file for this host
-  cron_path="/var/spool/cron"
-  # Check if a known cron dir exists - else fail (find command will fail if dir does not exist)
-  if cron_tab=$(find $cron_path -name "root" 2>/dev/null) ; then
-    # Must have lines in crontab to test
-    line_[0]='MAILTO=""'
-    line_[1]='SHELL=/bin/bash'
-    line_[2]='PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin'
-
-    # if the cron dir exists but there is no root cron file, create
-    if [[ -z ${cron_tab} ]] ; then
-      # check which cron dir this host uses
-      if [[ -d ${cron_path}/crontabs ]] ; then
-        cron_tab="/var/spool/cron/crontabs/root"
-        createCron crontab # crontab is the group owner of crontab in debain based
-      else
-        cron_tab="/var/spool/cron/root"
-        createCron root # root is the group owner of crontab in debain based
-      fi
-
-    else # if the root crontab exists check if these lines are in crontab
-      grep -q '^MAILTO=' "$cron_tab" || put_[0]="${line_[0]}"
-      grep -q '^SHELL=/bin/bash' "$cron_tab" || put_[1]="${line_[1]}"
-      grep -q '^PATH=' "$cron_tab" || put_[2]="${line_[2]}"
-    fi
-
-    # if any of the lines need to be added...
-    if [[ -n ${put_[*]} ]] ; then
-      cron_header=$(printf '%s\\n' "${put_[@]}")
-      (echo -e "$cron_header"; crontab -l) | crontab
-    fi
-    install_cron="y" # add the cronjob at the very end of the script
-  else
-    printf '\nCould not find where to create a crontab on this host\nSkipping crontab\n'
-  fi
-fi
-
 # update lc_myconn.py (DB connection params)
 if [[ -f ${m_dir}/py/lc_myconn.py ]] ; then
-  printf '\nlc_myconn.py exists, skipping setting up the credentails\n'
+  printf '\nlc_myconn.py exists, skipping setting up the credentails\n(If required update the params manually %s)\n' "${m_dir}/py/lc_myconn.py"
 else
   printf '\nUpdating the DB connection settings'
   printf '\nEnter the host ip / name of the MySQL DB host > '
@@ -577,9 +601,11 @@ else
   "$myhost" "$myport" "$myuser" "'$mypass'" "$mydb" > "${m_dir}/py/lc_myconn.py"
 fi
 
+# time for backup dir's names
+e_time=$(date +%Y-%m-%d_%H.%M.%S)
+
 # create backup dir of /etc/fail2ban
-e_time=$(date +%s)
-bkp_dir="/var/bkp/f2b_${e_time}.bkp"
+bkp_dir="/var/bkp/c-f2b.bkp/${e_time}"
 mkdir -p "$bkp_dir"
 
 # backup /etc/fail2ban ; if failed exit
@@ -591,7 +617,7 @@ else
 
   # put the new config files in /etc/fail2ban
   updated="0"
-  for d in "${m_dir}/lc_fail2ban_${new_lc}/"* ; do
+  for d in "${m_dir}/lc_fail2ban.tmp/"* ; do
     for f in "${d}/"* ; do
       if [[ $f =~ "example_"* ]] ; then
         continue
@@ -619,10 +645,10 @@ printf '
 [INFO:] you can update your existing jails to use the shared action,
 example "action = ipset-jails[name=<jail_name>,bantime=2147483]"\n'
 
-printf '\nChecking if %s/lc_custom exists for custom commands before reload\n' "$m_dir"
-if [[ -e ${m_dir}/lc_custom ]] ; then
-  ${m_dir}/lc_custom
-  printf 'Exec %s/lc_custom complete \n' "$m_dir"
+printf '\nChecking if %s/lc_custom.sh exists for custom commands before reload\n' "$m_dir"
+if [[ -e ${m_dir}/lc_custom.sh ]] ; then
+  "${m_dir}/lc_custom.sh"
+  printf 'Exec %s/lc_custom.sh complete \n' "$m_dir"
 fi
 printf '[INFO:] Reloading fail2ban-client...'
 if ! systemctl is-active -q fail2ban ; then
@@ -643,15 +669,50 @@ else
 fi
 
 # Install crontab
-if [[ $install_cron == y ]] ; then
-  # Remove old cronjobs for this first
-  crontab -l | grep -v 'python3 .*/py/readdb.py' | crontab
-  # Add cronjob
-  (crontab -l ; echo "* * * * * python3 ${m_dir}/py/readdb.py >> /var/log/cronRun.log 2>&1") 2>&1 | crontab
-  printf '
-  [INFO:] Installed crontab, depending on how many records already
-  exist in the DB it can take up to several hours to finish adding
-  the IPs to fail2ban.\n'
+# Cronjob
+if [[ ${r[5]} =~ ^(y|yes)$ ]] ; then
+  # Find the crontab file for this host
+  cron_path="/var/spool/cron"
+  # Check if a known cron dir exists - else fail (find command will fail if dir does not exist)
+  if cron_tab=$(find $cron_path -name "root" 2>/dev/null) ; then
+    # Must have lines in crontab to test
+    line_[0]='MAILTO=""'
+    line_[1]='SHELL=/bin/bash'
+    line_[2]='PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin'
+
+    # if the cron dir exists but there is no root cron file, create
+    if [[ -z ${cron_tab} ]] ; then
+      # check which cron dir this host uses
+      if [[ -d ${cron_path}/crontabs ]] ; then
+        cron_tab="/var/spool/cron/crontabs/root"
+        createCron crontab # crontab is the group owner of crontab in debain distros
+      else
+        cron_tab="/var/spool/cron/root"
+        createCron root # root is the group owner of crontab in centos distros
+      fi
+
+    else # if the root crontab exists check if these lines are in crontab
+      grep -q '^MAILTO=' "$cron_tab" || put_[0]="${line_[0]}"
+      grep -q '^SHELL=/bin/bash' "$cron_tab" || put_[1]="${line_[1]}"
+      grep -q '^PATH=' "$cron_tab" || put_[2]="${line_[2]}"
+    fi
+
+    # if any of the lines need to be added...
+    if [[ -n ${put_[*]} ]] ; then
+      cron_header=$(printf '%s\\n' "${put_[@]}")
+      (echo -e "$cron_header"; crontab -l) | crontab
+    fi
+    # Remove old cronjobs for this first
+    crontab -l | grep -v 'python3 .*/py/readdb.py' | crontab
+    # Add cronjob
+    (crontab -l ; echo "* * * * * python3 ${m_dir}/py/readdb.py >> /var/log/cronRun.log 2>&1") 2>&1 | crontab
+    printf '
+[INFO:] Installed crontab, depending on how many records already
+exist in the DB it can take up to several hours to finish adding
+the IPs to fail2ban.\n'
+  else
+    printf '\nCould not find where to create a crontab on this host\nSkipping crontab\n'
+  fi
 fi
 
 if ! fail2ban-client "$f2b_job" ; then
@@ -682,5 +743,17 @@ there is a problem with your original config\n'
     fi
   fi
 fi
+
+# backup old configs and move new configs
+for d in fail2ban iptables ; do
+  # check if a previous config file exists
+  if [[ -d "${m_dir}/lc_${d}" ]] ; then
+    # if new config file was created move the previous one to backup
+    [[ -d "${m_dir}/lc_${d}.tmp" ]] && mv "${m_dir}/lc_${d}" "${m_dir}/lc_${d}_${e_time}.bkp"
+  fi
+  # if new config file was created move it from .tmp
+  [[ -d "${m_dir}/lc_${d}.tmp" ]] && mv "${m_dir}/lc_${d}.tmp" "${m_dir}/lc_${d}"
+done
+
 printf '\n[SUCCESS:] Setup completed successfully\n'
 exit_success=0

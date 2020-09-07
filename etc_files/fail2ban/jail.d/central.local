@@ -1,12 +1,12 @@
 [INCLUDES]
-before = whitelist.local
+before = safelist.local
 
 [DEFAULT]
 # Number of login attempts before ban
 maxretry = 5
 # After how long to reset counter (6 hours)
 findtime = 21600
-# ignore ip's are called from whitelist with following line
+# ignore ip's are called from safelist with following line
 ignoreip = %(ignoreip)s
 
 [shared]
@@ -25,5 +25,15 @@ logpath = /var/log/portprobe.log
 filter  = portprobe
 maxretry = 1
 findtime = 21600
+bantime = 2147483
+action = ipset-portprobe[name=portprobe,bantime=2147483]
+
+[portprobe-sf]
+enabled = False
+port = 0:65535
+logpath = /var/log/portprobe.log
+filter  = portprobe
+maxretry = 8
+findtime = 3600
 bantime = 2147483
 action = ipset-portprobe[name=portprobe,bantime=2147483]

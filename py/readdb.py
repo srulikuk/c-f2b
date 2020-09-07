@@ -39,9 +39,9 @@ def main():
         try:
             query = """
             SELECT id, added_by, created, jailname, ip
-            FROM ip_table
+            FROM ban_list
             WHERE {} = '0'
-            AND whitelist = '0'
+            AND safe_status = '0'
             AND DATE_SUB(CURDATE(),INTERVAL 25 DAY) <= created
             ORDER BY id
             """.format(
@@ -74,7 +74,7 @@ def main():
             ## Would be ideal if we can get the bantime of the actual IPSet and calculate if remaining bantime > 40% of IPset bantime
             if int(result[2]) > 1000000:
                 update = """
-                UPDATE ip_table
+                UPDATE ban_list
                 SET {} = '2'
                 WHERE id={}
                 """.format(
@@ -94,7 +94,7 @@ def main():
                     )
                 # Update DB that its been added for this host (code:1)
                 update = """
-                UPDATE ip_table
+                UPDATE ban_list
                 SET {} = '1'
                 WHERE id={}
                 """.format(
@@ -105,7 +105,7 @@ def main():
             except subprocess.CalledProcessError:
             # If addng to fail2ban failed update DB with code:3 (unknown error) so it does ot keep trying every minute
                 update = """
-                UPDATE ip_table
+                UPDATE ban_list
                 SET {} = '3'
                 WHERE id={}
                 """.format(
@@ -115,10 +115,17 @@ def main():
                 db.commit()
 
     # Check if any ip's need to be removed from ban
+    f2bcmd = ("fail2ban-client status")
+    jails = subprocess.check_output(f2bcmd, shell=True)
+    jails = jails.decode('utf8').split('\t')
+    jails = jails[2].split(', ')
+    jails = ' '.join(jails).split()
+
+    # Check temp remove
     queryrem = """
-    SELECT id, ip, whitelist
-    FROM ip_table
-    WHERE whitelist != '0'
+    SELECT id, ip, safe_status
+    FROM ban_list
+    WHERE safe_status = '2'
     AND {} != '4'
     ORDER BY id
     """.format(
@@ -127,44 +134,136 @@ def main():
     cursor.execute(queryrem)
     result = cursor.fetchall()
     if result:
-        # from fail2ban.client.csocket import CSocket
-        # s = CSocket("/run/fail2ban/fail2ban.sock")
-        # jails = s.send(["status"])[1][1][1]
-        # jails = jails.split(", ")
-        f2bcmd = ("fail2ban-client status")
-        jails = subprocess.check_output(f2bcmd, shell=True)
-        jails = jails.decode('utf8').split('\t')
-        jails = jails[2].split(', ')
-        jails = ' '.join(jails).split()
         for row in result:
             row_id = (row[0])
             rem_ip = (row[1])
             rem_type = (row[2])
             row
+
+            # if ip is a range
+            if '/' in rem_ip:
+                range = True
+            else:
+                range = False
+
             # Run the unban command
-            # s.send(["unban", rem_ip])
-            f2bcmd = ("fail2ban-client unban " + rem_ip)
-            subprocess.run(f2bcmd, shell=True)
-            if rem_type == 1:
-                # If type is permenant unban add IP to ignore list
-                for jname in jails:
-                    # s.send(['set', jname, 'addignoreip', rem_ip])
-                    f2bcmd = ("fail2ban-client set " + jname + " addignoreip " + rem_ip)
+
+            # If its a range loop through the range to find banned ip's in the range
+            if range:
+                ip_start = rem_ip.split('.')[0]
+                ip_start = ('^'+ip_start+'.')
+                oscmd = subprocess.check_output("ipset list | grep " + ip_start, universal_newlines=True, shell=True)
+                result = oscmd
+                for i in ipaddress.IPv4Network(rem_ip):
+                    p = str(i)
+                    p = (p + ' t')
+                    if p in str(result):
+                        # f2bcmd = ("fail2ban-client unban " + str(i)) # removed to support fail2ban pre v0.10
+                        for j in jails:
+                            f2bcmd = ("fail2ban-client set " + j + " unbanip " + str(i))
+                            subprocess.run(f2bcmd, shell=True)
+            else:
+                # f2bcmd = ("fail2ban-client unban " + rem_ip) # removed to support fail2ban pre v0.10
+                for j in jails:
+                    f2bcmd = ("fail2ban-client set " + j + " unbanip "  + rem_ip)
                     subprocess.run(f2bcmd, shell=True)
-                with open("/etc/fail2ban/jail.d/whitelist.local", "r+") as whitelist:
-                    if rem_ip not in whitelist.read():
-                        whitelist.write(' {}\n'.format(rem_ip,))
 
             updaterem = """
-            UPDATE ip_table
+            UPDATE ban_list
             SET {} = '4'
             WHERE id='{}'
             """.format(
-                suuid.col_id, row_id
+            suuid.col_id, row_id
             )
             cursor.execute(updaterem)
             db.commit()
-        s.close()
+
+    # Check safe_list table
+    queryrem = """
+    SELECT id, ip
+    FROM safe_list
+    WHERE status = '1'
+    AND {} = '0'
+    ORDER BY id
+    """.format(
+        suuid.col_id
+    )
+    cursor.execute(queryrem)
+    result = cursor.fetchall()
+    if result:
+        for row in result:
+            row_id = (row[0])
+            rem_ip = (row[1])
+            rem_type = (row[2])
+            row
+
+            # if ip is a range
+            if '/' in rem_ip:
+                range = True
+            else:
+                range = False
+
+            # Run the unban command
+
+            # If its a range loop through the range to find banned ip's in the range
+            if range:
+                ip_start = rem_ip.split('.')[0]
+                ip_start = ('^'+ip_start+'.')
+                oscmd = subprocess.check_output("ipset list | grep " + ip_start, universal_newlines=True, shell=True)
+                result = oscmd
+                for i in ipaddress.IPv4Network(rem_ip):
+                    p = str(i)
+                    p = (p + ' t')
+                    if p in str(result):
+                        # f2bcmd = ("fail2ban-client unban " + str(i)) # removed to support fail2ban pre v0.10
+                        for j in jails:
+                            f2bcmd = ("fail2ban-client set " + j + " unbanip " + str(i))
+                            subprocess.run(f2bcmd, shell=True)
+            else:
+                # f2bcmd = ("fail2ban-client unban " + rem_ip) # removed to support fail2ban pre v0.10
+                for j in jails:
+                    f2bcmd = ("fail2ban-client set " + j + " unbanip " + rem_ip)
+                    subprocess.run(f2bcmd, shell=True)
+
+            updaterem = """
+            UPDATE safe_list
+            SET {} = '1'
+            WHERE id='{}'
+            """.format(
+            suuid.col_id, row_id
+            )
+            cursor.execute(updaterem)
+            db.commit()
+
+
+            if range:
+                for jname in jails:
+                    f2bcmd = ("fail2ban-client set " + jname + " addignoreip " + rem_ip)
+                    subprocess.run(f2bcmd, shell=True)
+                # if ip is a range check it's not yet in list and check if any ip's in list fit in this range
+                # all lines that are not in the range or do not match an ip are written to the file.
+                with open("/etc/fail2ban/jail.d/safelist.local", "r") as safecheck:
+                    if rem_ip not in safecheck.read():
+                        r = rem_ip.split('/')[0]
+                        with open("/etc/fail2ban/jail.d/safelist.local", "r+") as safelist:
+                            lines = safelist.readlines()
+                            safelist.seek(0)
+                            for line in lines:
+                                l = line.strip()
+                                try:
+                                    if not ipaddress.IPv4Address(l) in ipaddress.IPv4Network(rem_ip):
+                                        if len(l) != 0:
+                                            safelist.write(line)
+                                except ipaddress.AddressValueError:
+                                    if len(l) != 0:
+                                        safelist.write(line)
+                safelist.write(' {}\n'.format(rem_ip,))
+                safelist.truncate()
+            else:
+                with open("/etc/fail2ban/jail.d/safelist.local", "r+") as safelist:
+                    if rem_ip not in safelist.read():
+                        safelist.write(' {}\n'.format(rem_ip,))
+
     db.close()
     sys.exit(0)
 
